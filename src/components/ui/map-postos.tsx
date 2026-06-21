@@ -19,7 +19,7 @@ export interface PostoMapItem {
 }
 
 function makePostoIcon(parceiro: boolean) {
-  const color = parceiro ? '#2563eb' : '#6b7280'
+  const color = parceiro ? '#0e8285' : '#6b7280'
   return L.divIcon({
     html: `<div style="
       width:28px;height:28px;border-radius:50% 50% 50% 0;
@@ -39,13 +39,13 @@ function makeUserIcon() {
       <div style="position:relative;width:20px;height:20px;">
         <div style="
           position:absolute;inset:0;border-radius:50%;
-          background:rgba(37,99,235,0.2);
+          background:rgba(14,130,133,0.2);
           animation:pulse 2s infinite;
         "></div>
         <div style="
           position:absolute;inset:4px;border-radius:50%;
-          background:#2563eb;border:2px solid white;
-          box-shadow:0 2px 6px rgba(37,99,235,.5);
+          background:#0e8285;border:2px solid white;
+          box-shadow:0 2px 6px rgba(14,130,133,.5);
         "></div>
       </div>
       <style>@keyframes pulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.8);opacity:.2}}</style>`,

@@ -183,15 +183,15 @@ export default function RelatorioPeriodoPage() {
                     >
                       <defs>
                         <linearGradient id="areaBlue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.18" />
-                          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.01" />
+                          <stop offset="0%" stopColor="#16a3a4" stopOpacity="0.18" />
+                          <stop offset="100%" stopColor="#16a3a4" stopOpacity="0.01" />
                         </linearGradient>
                       </defs>
                       <path d={areaPath} fill="url(#areaBlue)" />
                       <path
                         d={linePath}
                         fill="none"
-                        stroke="#3b82f6"
+                        stroke="#16a3a4"
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -204,7 +204,7 @@ export default function RelatorioPeriodoPage() {
                           cy={p.y}
                           r="2.2"
                           fill="white"
-                          stroke="#3b82f6"
+                          stroke="#16a3a4"
                           strokeWidth="1.8"
                           vectorEffect="non-scaling-stroke"
                         />

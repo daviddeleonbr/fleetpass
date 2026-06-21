@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Fuel, Eye, EyeOff, Building2, Flame, HardHat, Shield, ClipboardCopy, Check } from 'lucide-react'
+import { motion } from 'framer-motion'
+import {
+  Fuel, Eye, EyeOff, ShieldCheck, CheckCircle2, Car, Hash, MapPin, ScanLine, BadgeCheck,
+} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { authenticate, MOCK_USERS, type UserRole } from '@/lib/mock-auth'
 import { supabase } from '@/lib/supabase'
-import { cn } from '@/lib/utils'
 
 const ROLE_REDIRECT: Record<string, string> = {
   empresa:   '/empresa',
@@ -18,26 +19,7 @@ const ROLE_REDIRECT: Record<string, string> = {
   admin:     '/admin',
 }
 
-const roleConfig: Record<UserRole, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  empresa: { label: 'Empresa', icon: Building2, color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-  posto: { label: 'Posto', icon: Flame, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' },
-  frentista: { label: 'Frentista', icon: HardHat, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
-  admin: { label: 'Admin', icon: Shield, color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
-  return (
-    <button onClick={copy} className="ml-1 text-gray-400 hover:text-gray-600 transition-colors">
-      {copied ? <Check size={11} className="text-emerald-500" /> : <ClipboardCopy size={11} />}
-    </button>
-  )
-}
+const ease = [0.22, 1, 0.36, 1] as const
 
 export default function LoginPage() {
   const router = useRouter()
@@ -52,11 +34,9 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    // 1. Tenta login real no Supabase
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
     if (!authError && authData.user) {
-      // Busca o perfil para saber o role e redirecionar corretamente
       const { data: perfil } = await supabase
         .from('perfis')
         .select('role')
@@ -68,75 +48,152 @@ export default function LoginPage() {
       return
     }
 
-    // 2. Fallback: acessos de demonstração (mock)
-    const mockUser = authenticate(email, password)
-    if (mockUser) {
-      router.push(mockUser.redirect)
-      return
-    }
-
     setError('Email ou senha incorretos.')
     setLoading(false)
   }
 
-  const fillCredentials = (userEmail: string, userPassword: string) => {
-    setEmail(userEmail)
-    setPassword(userPassword)
-    setError('')
-  }
-
   return (
     <div className="min-h-screen flex">
-      {/* Left panel */}
-      <div className="hidden lg:flex lg:w-2/5 bg-gray-900 flex-col justify-between p-10 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-blue-600/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 -left-10 w-60 h-60 bg-blue-500/10 rounded-full blur-2xl" />
-          <div className="absolute top-1/2 left-1/3 w-40 h-40 bg-indigo-500/10 rounded-full blur-xl" />
-        </div>
+      {/* ── Left panel — vitrine do produto ──────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-petrol-950">
+        {/* fundo: gradiente + grade + brilhos */}
+        <div className="absolute inset-0 bg-gradient-to-br from-petrol-900 via-petrol-950 to-[#03161a]" />
+        <div className="absolute inset-0 bg-grid opacity-[0.06]" />
+        <motion.div
+          aria-hidden
+          className="absolute -top-32 -left-24 w-96 h-96 rounded-full bg-petrol-500/20 blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          aria-hidden
+          className="absolute -bottom-24 -right-20 w-[30rem] h-[30rem] rounded-full bg-fuel-500/15 blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.65, 0.4] }}
+          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        />
 
-        <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Fuel size={18} className="text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">FuelLink</span>
-          </Link>
-        </div>
+        {/* conteúdo */}
+        <div className="relative z-10 flex flex-col justify-between w-full p-12 xl:p-14">
+          {/* logo */}
+          <motion.div
+            initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}
+          >
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="w-10 h-10 bg-petrol-500 rounded-xl flex items-center justify-center shadow-lg shadow-petrol-900/50">
+                <Fuel size={20} className="text-white" />
+              </span>
+              <span className="text-xl font-bold text-white tracking-tight">FuelLink</span>
+            </Link>
+          </motion.div>
 
-        <div className="relative z-10">
-          <p className="text-3xl font-bold text-white leading-snug mb-3">
-            Conectando frotas<br />
-            <span className="text-blue-400">aos melhores postos.</span>
-          </p>
-          <p className="text-gray-400 text-sm">
-            Gerencie abastecimentos, controle gastos e mantenha sua frota rodando.
-          </p>
-        </div>
+          {/* centro: headline + mockup */}
+          <div className="py-8">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease, delay: 0.1 }}
+            >
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-xs font-semibold text-petrol-100">
+                <ShieldCheck size={13} className="text-fuel-300" />
+                Abastecimento pré-aprovado
+              </span>
+              <h2 className="mt-5 text-4xl xl:text-[2.75rem] font-bold leading-[1.1] tracking-tight text-white">
+                Cada abastecimento,<br />
+                <span className="text-fuel-400">já nasce reconhecido.</span>
+              </h2>
+              <p className="mt-4 text-petrol-100/70 text-[15px] leading-relaxed max-w-md">
+                O posto recebe com prova registrada; a frota paga só o que autorizou.
+                Sem calote, sem contestação, sem abastecimento fantasma.
+              </p>
+            </motion.div>
 
-        <div className="relative z-10">
-          <svg viewBox="0 0 300 140" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full opacity-30">
-            <rect x="20" y="60" width="60" height="70" rx="4" fill="#3B82F6" />
-            <rect x="30" y="40" width="40" height="25" rx="3" fill="#60A5FA" />
-            <rect x="40" y="50" width="8" height="12" rx="1" fill="#1D4ED8" />
-            <rect x="110" y="80" width="80" height="50" rx="4" fill="#2563EB" />
-            <rect x="130" y="60" width="40" height="25" rx="3" fill="#3B82F6" />
-            <ellipse cx="125" cy="133" rx="10" ry="5" fill="#1D4ED8" />
-            <ellipse cx="175" cy="133" rx="10" ry="5" fill="#1D4ED8" />
-            <rect x="220" y="90" width="60" height="40" rx="4" fill="#1E40AF" />
-            <rect x="230" y="75" width="30" height="20" rx="3" fill="#2563EB" />
-            <line x1="0" y1="133" x2="300" y2="133" stroke="#374151" strokeWidth="2" />
-          </svg>
+            {/* card de produto em vidro */}
+            <motion.div
+              initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease, delay: 0.25 }}
+              className="mt-9 relative max-w-sm"
+            >
+              <motion.div
+                animate={{ y: [0, -7, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                className="rounded-2xl bg-white/[0.07] border border-white/10 backdrop-blur-md p-5 shadow-2xl shadow-black/40"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-fuel-300">
+                    <Hash size={12} /> FL-K9H-B83Q
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-petrol-100 bg-petrol-500/30 border border-petrol-400/30 rounded-full px-2 py-0.5">
+                    <CheckCircle2 size={11} /> liberado
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-2.5">
+                  {[
+                    { icon: Car, label: 'Veículo', value: 'ABC-1234' },
+                    { icon: Fuel, label: 'Combustível', value: 'Diesel S-10' },
+                    { icon: MapPin, label: 'Posto', value: 'Auto Posto Senna' },
+                  ].map((r) => (
+                    <div key={r.label} className="flex items-center gap-2.5 text-[13px]">
+                      <r.icon size={14} className="text-petrol-300 shrink-0" />
+                      <span className="text-petrol-100/50">{r.label}</span>
+                      <span className="ml-auto font-semibold text-white">{r.value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-3 gap-2 text-center">
+                  {[
+                    { k: 'Requisições', v: '128' },
+                    { k: 'Postos', v: '14' },
+                    { k: 'Economia', v: '9%' },
+                  ].map((s) => (
+                    <div key={s.k}>
+                      <p className="text-base font-bold text-white">{s.v}</p>
+                      <p className="text-[10px] text-petrol-100/50">{s.k}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* selo flutuante */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.7 }}
+                className="absolute -right-3 -top-4 flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-xl"
+              >
+                <span className="w-7 h-7 rounded-lg bg-fuel-50 flex items-center justify-center">
+                  <ShieldCheck size={15} className="text-fuel-600" />
+                </span>
+                <div className="leading-tight">
+                  <p className="text-[11px] font-bold text-petrol-950">Pagamento garantido</p>
+                  <p className="text-[9px] text-petrol-700/70">pré-aprovado pela frota</p>
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
+
+          {/* rodapé: selos de confiança */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease, delay: 0.45 }}
+            className="flex flex-wrap gap-x-7 gap-y-3"
+          >
+            {[
+              { icon: BadgeCheck, label: 'Recebimento garantido' },
+              { icon: ShieldCheck, label: 'Sem contestação' },
+              { icon: ScanLine, label: 'Validação por QR' },
+            ].map((f) => (
+              <div key={f.label} className="flex items-center gap-2 text-sm text-petrol-100/80">
+                <f.icon size={16} className="text-fuel-300" />
+                {f.label}
+              </div>
+            ))}
+          </motion.div>
         </div>
       </div>
 
-      {/* Right panel */}
+      {/* ── Right panel — formulário ─────────────────────────────────────── */}
       <div className="flex-1 flex items-center justify-center bg-white p-8 overflow-y-auto">
         <div className="w-full max-w-sm py-8">
 
           {/* Mobile logo */}
           <Link href="/" className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-petrol-600 rounded-lg flex items-center justify-center">
               <Fuel size={16} className="text-white" />
             </div>
             <span className="font-bold text-gray-900">FuelLink</span>
@@ -144,52 +201,6 @@ export default function LoginPage() {
 
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Bem-vindo de volta</h1>
           <p className="text-gray-500 text-sm mb-6">Entre na sua conta para continuar.</p>
-
-          {/* Demo access cards */}
-          <div className="mb-6 p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 space-y-2">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Acessos de demonstração
-            </p>
-            {MOCK_USERS.map((user) => {
-              const config = roleConfig[user.role]
-              const Icon = config.icon
-              return (
-                <button
-                  key={user.email}
-                  onClick={() => fillCredentials(user.email, user.password)}
-                  className={cn(
-                    'w-full text-left px-3 py-2.5 rounded-lg border transition-all hover:shadow-sm',
-                    config.bg,
-                    email === user.email ? 'ring-2 ring-offset-1 ring-blue-400' : ''
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Icon size={14} className={cn('shrink-0 mt-0.5', config.color)} />
-                      <div className="min-w-0">
-                        <p className={cn('text-xs font-semibold truncate', config.color)}>
-                          {config.label}
-                        </p>
-                        <p className="text-[11px] text-gray-500 truncate">{user.name}</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">clique para preencher</span>
-                  </div>
-                  <div className="mt-1.5 flex gap-3 pl-5">
-                    <span className="text-[11px] text-gray-500 font-mono flex items-center gap-0.5">
-                      {user.email}
-                      <CopyButton text={user.email} />
-                    </span>
-                    <span className="text-[11px] text-gray-400">·</span>
-                    <span className="text-[11px] text-gray-500 font-mono flex items-center gap-0.5">
-                      {user.password}
-                      <CopyButton text={user.password} />
-                    </span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input

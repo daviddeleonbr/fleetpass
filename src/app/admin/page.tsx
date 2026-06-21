@@ -1,30 +1,25 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardHeader } from '@/components/ui/card'
 import {
   Store, Building2, FileText, Droplets, TrendingUp,
-  DollarSign, Receipt, CreditCard, AlertTriangle, CheckCircle2, Clock,
+  DollarSign, Receipt, CreditCard, AlertTriangle, CheckCircle2, Loader2,
 } from 'lucide-react'
 
 const formatBRL = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-const KPI_ROW1 = [
-  { label: 'Total Postos', value: '32', icon: Store, color: 'indigo' },
-  { label: 'Total Empresas', value: '147', icon: Building2, color: 'blue' },
-  { label: 'Requisições/mês', value: '4.832', icon: FileText, color: 'green' },
-  { label: 'Volume combustível/mês', value: '284.500 L', icon: Droplets, color: 'cyan' },
-]
-
-const KPI_ROW2 = [
-  { label: 'GMV/mês', value: formatBRL(1284300), icon: TrendingUp, color: 'emerald' },
-  { label: 'Receita FuelLink (2,5%)', value: formatBRL(32107), icon: DollarSign, color: 'indigo' },
-  { label: 'Faturas fechadas', value: '89', icon: Receipt, color: 'amber' },
-  { label: 'Subcontas Asaas', value: '32', icon: CreditCard, color: 'purple' },
-]
+interface DashboardData {
+  kpis: {
+    totalPostos: number; totalEmpresas: number; requisicoesMes: number; volumeMes: number
+    gmvMes: number; receitaMes: number; faturas: number; subcontas: number; taxaPct: number
+  }
+  volumeCombustivel: { tipo: string; percentual: number }[]
+  crescimentoPostos: { mes: string; valor: number }[]
+  recentTxs: { id: string; empresa: string; posto: string; valor: number; data: string; status: string }[]
+  postosSemSubconta: number
+}
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   indigo: { bg: 'bg-indigo-50', text: 'text-indigo-700', icon: 'text-indigo-600' },
@@ -36,228 +31,192 @@ const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
   purple: { bg: 'bg-purple-50', text: 'text-purple-700', icon: 'text-purple-600' },
 }
 
-const CRESCIMENTO_POSTOS = [
-  { mes: 'Out', valor: 22 },
-  { mes: 'Nov', valor: 24 },
-  { mes: 'Dez', valor: 25 },
-  { mes: 'Jan', valor: 27 },
-  { mes: 'Fev', valor: 29 },
-  { mes: 'Mar', valor: 32 },
-]
-const maxPosto = Math.max(...CRESCIMENTO_POSTOS.map(d => d.valor))
-
-const VOLUME_COMBUSTIVEL = [
-  { tipo: 'Diesel S10', percentual: 45, color: 'bg-blue-500' },
-  { tipo: 'Gasolina Comum', percentual: 28, color: 'bg-green-500' },
-  { tipo: 'Etanol', percentual: 16, color: 'bg-amber-500' },
-  { tipo: 'GNV', percentual: 7, color: 'bg-purple-500' },
-  { tipo: 'Diesel S500', percentual: 4, color: 'bg-red-400' },
-]
-
-type TxStatus = 'pago' | 'pendente' | 'contestado'
-interface RecentTx {
-  id: string
-  empresa: string
-  posto: string
-  valor: number
-  data: string
-  status: TxStatus
-}
-
-const RECENT_TXS: RecentTx[] = [
-  { id: 'TX-8821', empresa: 'Transportadora Rápida Ltda', posto: 'Posto Shell Centro', valor: 1250.0, data: '14/03/2025 09:14', status: 'pago' },
-  { id: 'TX-8820', empresa: 'Construtora Horizonte S.A.', posto: 'Posto Ipiranga Norte', valor: 890.5, data: '14/03/2025 08:52', status: 'pago' },
-  { id: 'TX-8819', empresa: 'Distribuidora Central', posto: 'Posto BR Sul', valor: 530.0, data: '13/03/2025 17:30', status: 'pendente' },
-  { id: 'TX-8818', empresa: 'Grupo Expresso Logística', posto: 'Posto Shell Centro', valor: 2100.0, data: '13/03/2025 16:05', status: 'pago' },
-  { id: 'TX-8817', empresa: 'Frota Urbana Serviços', posto: 'Posto Ale Oeste', valor: 380.0, data: '13/03/2025 14:20', status: 'pago' },
-  { id: 'TX-8816', empresa: 'Mineração São Paulo', posto: 'Posto Petrobras Leste', valor: 3450.0, data: '12/03/2025 11:15', status: 'contestado' },
-  { id: 'TX-8815', empresa: 'Transportadora Rápida Ltda', posto: 'Posto Shell Centro', valor: 670.0, data: '12/03/2025 10:00', status: 'pago' },
-  { id: 'TX-8814', empresa: 'Cooperativa Agro Norte', posto: 'Posto BR Sul', valor: 1880.0, data: '11/03/2025 15:45', status: 'pago' },
-  { id: 'TX-8813', empresa: 'Construtora Horizonte S.A.', posto: 'Posto Ipiranga Norte', valor: 420.0, data: '11/03/2025 13:30', status: 'pendente' },
-  { id: 'TX-8812', empresa: 'Grupo Expresso Logística', posto: 'Posto Shell Centro', valor: 950.0, data: '10/03/2025 09:50', status: 'pago' },
-]
-
-const statusTxBadge: Record<TxStatus, string> = {
-  pago: 'bg-green-50 text-green-700',
+const barColors = ['bg-blue-500', 'bg-green-500', 'bg-amber-500', 'bg-purple-500', 'bg-red-400', 'bg-cyan-500']
+const statusTxBadge: Record<string, string> = {
+  faturado: 'bg-green-50 text-green-700',
   pendente: 'bg-amber-50 text-amber-700',
   contestado: 'bg-red-50 text-red-700',
 }
 
-const ALERTS = [
-  { type: 'warning', msg: '4 postos sem subconta Asaas configurada', detail: 'Posto Boa Vista, Posto Campinas 2, Posto Recife Sul, Posto Fortaleza Norte' },
-  { type: 'warning', msg: '2 empresas próximas ao limite de crédito', detail: 'Distribuidora Central (92%), Frota Urbana Serviços (88%)' },
-  { type: 'error', msg: '1 pagamento em atraso', detail: 'TX-8816 — Mineração São Paulo — R$ 3.450,00 contestado há 2 dias' },
-]
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 export default function AdminDashboard() {
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/admin/dashboard')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then(setData)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Erro ao carregar.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="py-24 flex items-center justify-center gap-2 text-gray-400">
+        <Loader2 size={22} className="animate-spin" /> <span className="text-sm">Carregando dashboard…</span>
+      </div>
+    )
+  }
+  if (error || !data) {
+    return (
+      <div className="py-12 text-center text-sm text-red-500 flex items-center justify-center gap-2">
+        <AlertTriangle size={16} /> {error || 'Erro ao carregar.'}
+      </div>
+    )
+  }
+
+  const k = data.kpis
+  const kpiRow1 = [
+    { label: 'Total Postos', value: String(k.totalPostos), icon: Store, color: 'indigo' },
+    { label: 'Total Empresas', value: String(k.totalEmpresas), icon: Building2, color: 'blue' },
+    { label: 'Requisições/mês', value: k.requisicoesMes.toLocaleString('pt-BR'), icon: FileText, color: 'green' },
+    { label: 'Volume/mês', value: `${k.volumeMes.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} L`, icon: Droplets, color: 'cyan' },
+  ]
+  const kpiRow2 = [
+    { label: 'GMV/mês', value: formatBRL(k.gmvMes), icon: TrendingUp, color: 'emerald' },
+    { label: `Receita FuelLink (${k.taxaPct}%)`, value: formatBRL(k.receitaMes), icon: DollarSign, color: 'indigo' },
+    { label: 'Faturas', value: String(k.faturas), icon: Receipt, color: 'amber' },
+    { label: 'Subcontas Asaas', value: String(k.subcontas), icon: CreditCard, color: 'purple' },
+  ]
+  const maxPosto = Math.max(1, ...data.crescimentoPostos.map(d => d.valor))
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-0.5">Visão geral da plataforma FuelLink</p>
       </div>
 
-      {/* KPI row 1 */}
-      <div className="grid grid-cols-4 gap-4">
-        {KPI_ROW1.map((kpi) => {
-          const c = colorMap[kpi.color]
-          return (
-            <Card key={kpi.label}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">{kpi.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${c.text}`}>{kpi.value}</p>
+      {[kpiRow1, kpiRow2].map((row, ri) => (
+        <div key={ri} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {row.map((kpi) => {
+            const c = colorMap[kpi.color]
+            return (
+              <Card key={kpi.label}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">{kpi.label}</p>
+                    <p className={`text-2xl font-bold mt-1 ${c.text}`}>{kpi.value}</p>
+                  </div>
+                  <div className={`w-10 h-10 ${c.bg} rounded-lg flex items-center justify-center shrink-0`}>
+                    <kpi.icon size={20} className={c.icon} />
+                  </div>
                 </div>
-                <div className={`w-10 h-10 ${c.bg} rounded-lg flex items-center justify-center shrink-0`}>
-                  <kpi.icon size={20} className={c.icon} />
-                </div>
-              </div>
-            </Card>
-          )
-        })}
-      </div>
+              </Card>
+            )
+          })}
+        </div>
+      ))}
 
-      {/* KPI row 2 */}
-      <div className="grid grid-cols-4 gap-4">
-        {KPI_ROW2.map((kpi) => {
-          const c = colorMap[kpi.color]
-          return (
-            <Card key={kpi.label}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">{kpi.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${c.text}`}>{kpi.value}</p>
-                </div>
-                <div className={`w-10 h-10 ${c.bg} rounded-lg flex items-center justify-center shrink-0`}>
-                  <kpi.icon size={20} className={c.icon} />
-                </div>
-              </div>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* Charts row */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Bar chart — posto growth */}
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader title="Crescimento de postos" subtitle="Últimos 6 meses" />
+          <CardHeader title="Crescimento de postos" subtitle="Acumulado — últimos 6 meses" />
           <div className="flex items-end gap-3 h-36 mt-2">
-            {CRESCIMENTO_POSTOS.map((d) => (
+            {data.crescimentoPostos.map((d) => (
               <div key={d.mes} className="flex-1 flex flex-col items-center gap-1.5">
                 <span className="text-xs font-semibold text-indigo-700">{d.valor}</span>
-                <div
-                  className="w-full bg-indigo-500 rounded-t-md transition-all"
-                  style={{ height: `${(d.valor / maxPosto) * 100}px` }}
-                />
-                <span className="text-xs text-gray-500">{d.mes}</span>
+                <div className="w-full bg-indigo-500 rounded-t-md transition-all"
+                  style={{ height: `${(d.valor / maxPosto) * 100}px` }} />
+                <span className="text-xs text-gray-500 capitalize">{d.mes}</span>
               </div>
             ))}
           </div>
         </Card>
 
-        {/* Horizontal bars — volume by fuel */}
         <Card>
-          <CardHeader title="Volume por combustível" subtitle="Distribuição percentual — Março 2025" />
-          <div className="space-y-3 mt-2">
-            {VOLUME_COMBUSTIVEL.map((v) => (
-              <div key={v.tipo}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-700">{v.tipo}</span>
-                  <span className="font-semibold text-gray-900">{v.percentual}%</span>
+          <CardHeader title="Volume por combustível" subtitle="Distribuição do mês" />
+          {data.volumeCombustivel.length === 0 ? (
+            <div className="py-10 text-center text-sm text-gray-400">Sem abastecimentos no mês.</div>
+          ) : (
+            <div className="space-y-3 mt-2">
+              {data.volumeCombustivel.map((v, i) => (
+                <div key={v.tipo}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-700">{v.tipo}</span>
+                    <span className="font-semibold text-gray-900">{v.percentual}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5">
+                    <div className={`${barColors[i % barColors.length]} h-2.5 rounded-full transition-all`}
+                      style={{ width: `${v.percentual}%` }} />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2.5">
-                  <div
-                    className={`${v.color} h-2.5 rounded-full transition-all`}
-                    style={{ width: `${v.percentual}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
-      {/* Recent transactions + Alerts */}
-      <div className="grid grid-cols-3 gap-4">
-        {/* Transactions — spans 2 cols */}
-        <div className="col-span-2">
+      {/* Recent + Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
           <Card padding="none">
             <div className="px-6 py-4 border-b border-gray-100">
               <h3 className="text-base font-semibold text-gray-900">Transações recentes</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Últimas 10 transações em todos os postos</p>
+              <p className="text-sm text-gray-500 mt-0.5">Últimos 10 abastecimentos</p>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ID</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Empresa</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Posto</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Valor</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Data</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {RECENT_TXS.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-xs font-mono text-gray-500">{tx.id}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 max-w-[160px] truncate">{tx.empresa}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate">{tx.posto}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">{formatBRL(tx.valor)}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{tx.data}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusTxBadge[tx.status]}`}>
-                          {tx.status}
-                        </span>
-                      </td>
+            {data.recentTxs.length === 0 ? (
+              <div className="py-12 text-center text-sm text-gray-400">Nenhuma transação ainda.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50">
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Código</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Empresa</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Posto</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Valor</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Data</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {data.recentTxs.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-xs font-mono text-gray-500">{tx.id}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 max-w-[160px] truncate">{tx.empresa}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 max-w-[140px] truncate">{tx.posto}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">{formatBRL(tx.valor)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{tx.data}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusTxBadge[tx.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
         </div>
 
-        {/* Alerts */}
         <div>
           <Card>
             <CardHeader title="Alertas" subtitle="Itens que precisam de atenção" />
             <div className="space-y-3">
-              {ALERTS.map((alert, i) => (
-                <div
-                  key={i}
-                  className={`flex gap-3 p-3 rounded-lg ${alert.type === 'error' ? 'bg-red-50' : 'bg-amber-50'}`}
-                >
-                  <div className="shrink-0 mt-0.5">
-                    {alert.type === 'error' ? (
-                      <AlertTriangle size={16} className="text-red-500" />
-                    ) : (
-                      <Clock size={16} className="text-amber-500" />
-                    )}
-                  </div>
+              {data.postosSemSubconta > 0 && (
+                <div className="flex gap-3 p-3 rounded-lg bg-amber-50">
+                  <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className={`text-sm font-medium ${alert.type === 'error' ? 'text-red-700' : 'text-amber-700'}`}>
-                      {alert.msg}
+                    <p className="text-sm font-medium text-amber-700">
+                      {data.postosSemSubconta} posto{data.postosSemSubconta !== 1 ? 's' : ''} sem subconta Asaas
                     </p>
-                    <p className={`text-xs mt-0.5 ${alert.type === 'error' ? 'text-red-600' : 'text-amber-600'}`}>
-                      {alert.detail}
-                    </p>
+                    <p className="text-xs mt-0.5 text-amber-600">Configure para habilitar o recebimento via split.</p>
                   </div>
                 </div>
-              ))}
-              <div className="flex gap-3 p-3 rounded-lg bg-green-50">
-                <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-green-700">27 postos operando normalmente</p>
-                  <p className="text-xs mt-0.5 text-green-600">Sem alertas pendentes</p>
+              )}
+              {data.postosSemSubconta === 0 && (
+                <div className="flex gap-3 p-3 rounded-lg bg-green-50">
+                  <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-green-700">Tudo em ordem</p>
+                    <p className="text-xs mt-0.5 text-green-600">Sem alertas pendentes.</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </Card>
         </div>
