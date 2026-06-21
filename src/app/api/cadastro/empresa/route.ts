@@ -51,13 +51,22 @@ export async function POST(req: NextRequest) {
   const cnpjFormatado = cnpj.replace(/\D/g, '')
     .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
 
+  const SEGMENTOS = [
+    'Transportadora', 'Logística', 'Construção Civil', 'Agronegócio',
+    'Comércio', 'Prestação de Serviços', 'Outros',
+  ] as const
+  const segmentoValido = (SEGMENTOS as readonly string[]).includes(segmento)
+    ? (segmento as typeof SEGMENTOS[number])
+    : 'Outros'
+
   const { error: empresaError } = await supabase
     .from('empresas')
     .insert({
       perfil_id:    userId,
       nome_empresa: nomeEmpresa,
       cnpj:         cnpjFormatado,
-      segmento:     segmento || 'Outros',
+      // database.types.ts está com mojibake nos enums acentuados; cast aqui.
+      segmento:     segmentoValido as never,
       cidade:       cidade   || '',
       estado:       estado   || '',
     })

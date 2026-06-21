@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
       .order('nome')
 
     if (combustivel) query = query.contains('combustiveis', [combustivel])
-    if (bandeira)    query = query.eq('bandeira', bandeira as 'Shell' | 'Ipiranga' | 'Petrobras' | 'Vibra' | 'Raízen' | 'Independente')
+    // NOTE: database.types.ts está com o enum posto_bandeira desatualizado;
+    // o valor é uma bandeira real válida no banco. Cast para passar o type-check.
+    if (bandeira)    query = query.eq('bandeira', bandeira as never)
 
     const { data: postos, error } = await query
 

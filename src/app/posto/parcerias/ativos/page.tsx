@@ -163,7 +163,7 @@ export default function ParceirosAtivosPage() {
     setParceiros((prev) => prev.map((p) => {
       if (p.id !== desbloqueioId) return p
       if (tipoDesbloqueio === 'credito') {
-        return { ...p, limiteValor: p.limiteValor + val, creditoExtra: val, bloqueadoManual: false, reqExtras: undefined }
+        return { ...p, limiteValor: (p.limiteValor ?? 0) + val, creditoExtra: val, bloqueadoManual: false, reqExtras: undefined }
       } else {
         return { ...p, reqExtras: Math.round(val), creditoExtra: undefined, bloqueadoManual: false }
       }
@@ -475,7 +475,7 @@ export default function ParceirosAtivosPage() {
                       <button
                         onClick={() => {
                           if (bloqueado) {
-                            if (!p.bloqueadoManual && p.creditoUsado >= p.limiteValor) {
+                            if (!p.bloqueadoManual && p.creditoUsado >= (p.limiteValor ?? 0)) {
                               abrirDesbloqueio(p.id)
                             } else {
                               toggleBloqueio(p.id)
@@ -576,7 +576,7 @@ export default function ParceirosAtivosPage() {
                   />
                   {tipoDesbloqueio === 'credito' && valorDesbloqueio && !isNaN(parseFloat(valorDesbloqueio)) && (
                     <p className="text-xs text-gray-400 mt-1">
-                      Novo limite: <strong>{formatBRL(p.limiteValor + parseFloat(valorDesbloqueio))}</strong>
+                      Novo limite: <strong>{formatBRL((p.limiteValor ?? 0) + parseFloat(valorDesbloqueio))}</strong>
                     </p>
                   )}
                 </div>

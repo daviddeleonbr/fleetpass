@@ -201,7 +201,7 @@ export default function PostoDashboardPage() {
     const combustiveisForm: PropostaFormItem[] = sol.combustiveis
       .filter((c) => COMBUSTIVEIS_POSTO.includes(c))
       .map((c) => ({ tipo: c, ativo: true, modalPreco: 'bomba', valor: '', unidade: '%' }))
-    setPropostaForm({ combustiveis: combustiveisForm, ciclo: { tipo: 'mensal', intervaloDias: '1', prazoRecebimento: '5' }, limiteCredito: '', volumeMinimo: '', validade: '15 dias', observacoes: '' })
+    setPropostaForm({ combustiveis: combustiveisForm, ciclo: { tipo: 'mensal', intervaloDias: '1', prazoRecebimento: '5' }, limiteCredito: '', semLimiteCredito: false, volumeMinimo: '', validade: '15 dias', observacoes: '' })
     setPropostaStep(1)
     setPropostaModal(id)
   }

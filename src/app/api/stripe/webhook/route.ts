@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     case 'customer.subscription.updated': {
       const sub = event.data.object as Stripe.Subscription
       await supabase.from('contas_posto').update({
-        stripe_subscription_status: sub.status as string,
+        stripe_subscription_status: sub.status as 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid',
         plano_id:                   sub.metadata?.planId ?? undefined,
         assinatura_fim:             sub.cancel_at
           ? new Date(sub.cancel_at * 1000).toISOString()
