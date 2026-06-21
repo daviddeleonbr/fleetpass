@@ -1,0 +1,235 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient, createServiceClient } from '@/lib/supabase-server'
+
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+
+    const svc = createServiceClient()
+
+    // Conta e postos do usuário
+    const { data: conta } = await svc
+      .from('contas_posto')
+      .select('id')
+      .eq('perfil_id', user.id)
+      .single()
+
+    if (!conta) return NextResponse.json({ error: 'Conta não encontrada.' }, { status: 404 })
+
+    const { data: postos } = await svc
+      .from('postos')
+      .select('id, nome')
+      .eq('conta_posto_id', conta.id)
+      .eq('status', 'ativo')
+
+    if (!postos?.length) {
+      return NextResponse.json({
+        metrics: { abastecimentosMes: 0, receitaB2B: 0, solicitacoesPendentes: 0, empresasParceiras: 0 },
+        solicitacoes: [],
+        recentActivity: [],
+        periodos: buildPeriodos(),
+        postosDesempenho: [],
+      })
+    }
+
+    const postoIds = postos.map((p) => p.id)
+
+    // ── Período selecionado ────────────────────────────────────────
+    const { searchParams } = new URL(req.url)
+    const periodoParam = searchParams.get('periodo') // "2026-03-01"
+    const periodos = buildPeriodos()
+    const periodoSel = periodos.find((p) => p.inicio === periodoParam) ?? periodos[0]
+
+    // ── Métricas do mês atual (periodos[0]) ───────────────────────
+    const mesAtualInicio = periodos[0].inicio
+    const mesAtualFim    = periodos[0].fim
+
+    const { data: abastMes } = await svc
+      .from('abastecimentos')
+      .select('valor')
+      .in('posto_id', postoIds)
+      .gte('data', mesAtualInicio)
+      .lte('data', mesAtualFim + 'T23:59:59')
+
+    const abastecimentosMes = abastMes?.length ?? 0
+    const receitaB2B = (abastMes ?? []).reduce((s, a) => s + Number(a.valor), 0)
+
+    const { count: solPendentes } = await svc
+      .from('solicitacoes')
+      .select('id', { count: 'exact', head: true })
+      .in('posto_id', postoIds)
+      .eq('status', 'aguardando')
+
+    const { count: parceiros } = await svc
+      .from('parcerias')
+      .select('id', { count: 'exact', head: true })
+      .in('posto_id', postoIds)
+      .eq('status', 'ativa')
+
+    // ── Solicitações pendentes ────────────────────────────────────
+    const { data: solicitacoesRaw } = await svc
+      .from('solicitacoes')
+      .select(`
+        id, combustiveis, volume_estimado, valor_estimado, mensagem, posto_id,
+        empresas ( nome_empresa, cnpj, cidade, estado )
+      `)
+      .in('posto_id', postoIds)
+      .eq('status', 'aguardando')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    const postoNomeMap = Object.fromEntries(postos.map((p) => [p.id, p.nome]))
+
+    const solicitacoes = (solicitacoesRaw ?? []).map((s) => {
+      const emp = s.empresas as { nome_empresa: string; cnpj: string; cidade: string; estado: string } | null
+      return {
+        id: s.id,
+        posto: postoNomeMap[s.posto_id] ?? '',
+        empresa: emp?.nome_empresa ?? '',
+        cnpj: emp?.cnpj ?? '',
+        cidade: emp ? `${emp.cidade}, ${emp.estado}` : '',
+        combustiveis: Array.isArray(s.combustiveis) ? s.combustiveis as string[] : [],
+        volume: s.volume_estimado ?? '',
+        valorEstimado: s.valor_estimado
+          ? Number(s.valor_estimado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) + '/mês'
+          : '',
+        mensagem: s.mensagem ?? '',
+      }
+    })
+
+    // ── Atividade recente ─────────────────────────────────────────
+    const [abastRecentes, solRecentes, parcRecentes] = await Promise.all([
+      svc.from('abastecimentos')
+        .select('id, posto_id, data, combustivel, litros, valor, motoristas(nome), veiculos(placa), requisicoes(codigo)')
+        .in('posto_id', postoIds)
+        .order('data', { ascending: false })
+        .limit(3),
+
+      svc.from('solicitacoes')
+        .select('id, posto_id, created_at, empresas(nome_empresa)')
+        .in('posto_id', postoIds)
+        .eq('status', 'aguardando')
+        .order('created_at', { ascending: false })
+        .limit(3),
+
+      svc.from('parcerias')
+        .select('id, posto_id, iniciada_em, empresas(nome_empresa)')
+        .in('posto_id', postoIds)
+        .eq('status', 'ativa')
+        .order('iniciada_em', { ascending: false })
+        .limit(3),
+    ])
+
+    type ActivityItem = {
+      tipo: 'concluido' | 'pendente' | 'ativo'
+      desc: string
+      sub: string
+      time: string
+      posto: string
+      ts: string
+    }
+
+    const activityItems: ActivityItem[] = []
+
+    ;(abastRecentes.data ?? []).forEach((a) => {
+      const motorista = (a.motoristas as { nome?: string } | null)?.nome ?? ''
+      const empresa = ''
+      const req = (a.requisicoes as { codigo?: string } | null)?.codigo ?? ''
+      const veiculo = (a.veiculos as { placa?: string } | null)?.placa ?? ''
+      activityItems.push({
+        tipo: 'concluido',
+        desc: `${req} validada${motorista ? ` por ${motorista}` : ''}${empresa ? ` — ${empresa}` : ''}`,
+        sub: `${veiculo} · ${a.combustivel} · ${Number(a.litros).toFixed(0)} L`,
+        time: new Date(a.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        posto: postoNomeMap[a.posto_id] ?? '',
+        ts: a.data,
+      })
+    })
+
+    ;(solRecentes.data ?? []).forEach((s) => {
+      const emp = (s.empresas as { nome_empresa?: string } | null)?.nome_empresa ?? ''
+      activityItems.push({
+        tipo: 'pendente',
+        desc: `Nova solicitação de ${emp}`,
+        sub: '',
+        time: new Date(s.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        posto: postoNomeMap[s.posto_id] ?? '',
+        ts: s.created_at,
+      })
+    })
+
+    ;(parcRecentes.data ?? []).forEach((p) => {
+      const emp = (p.empresas as { nome_empresa?: string } | null)?.nome_empresa ?? ''
+      activityItems.push({
+        tipo: 'ativo',
+        desc: `Parceria com ${emp} aprovada`,
+        sub: 'Contrato ativo',
+        time: new Date(p.iniciada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        posto: postoNomeMap[p.posto_id] ?? '',
+        ts: p.iniciada_em,
+      })
+    })
+
+    activityItems.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime())
+
+    // ── Desempenho por posto no período selecionado ───────────────
+    const { data: abastPeriodo } = await svc
+      .from('abastecimentos')
+      .select('posto_id, valor, litros, combustivel')
+      .in('posto_id', postoIds)
+      .gte('data', periodoSel.inicio)
+      .lte('data', periodoSel.fim + 'T23:59:59')
+
+    const postosDesempenho = postos.map((p) => {
+      const linhas = (abastPeriodo ?? []).filter((a) => a.posto_id === p.id)
+      const receita = linhas.reduce((s, a) => s + Number(a.valor), 0)
+      const litros  = linhas.reduce((s, a) => s + Number(a.litros), 0)
+      const count   = linhas.length
+      const combMap: Record<string, { litros: number; valor: number }> = {}
+      linhas.forEach((a) => {
+        if (!combMap[a.combustivel]) combMap[a.combustivel] = { litros: 0, valor: 0 }
+        combMap[a.combustivel].litros += Number(a.litros)
+        combMap[a.combustivel].valor  += Number(a.valor)
+      })
+      const combustiveis = Object.entries(combMap)
+        .map(([nome, d]) => ({ nome, ...d }))
+        .sort((a, b) => b.litros - a.litros)
+      return { id: p.id, label: p.nome, receita, litros, count, combustiveis }
+    })
+
+    return NextResponse.json({
+      metrics: {
+        abastecimentosMes,
+        receitaB2B,
+        solicitacoesPendentes: solPendentes ?? 0,
+        empresasParceiras: parceiros ?? 0,
+      },
+      solicitacoes,
+      recentActivity: activityItems.slice(0, 5),
+      periodos,
+      periodoSelecionado: periodoSel.inicio,
+      postosDesempenho,
+    })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+
+// Gera os últimos 3 meses completos + mês atual parcial
+function buildPeriodos() {
+  const now = new Date()
+  const result: { label: string; inicio: string; fim: string }[] = []
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const inicio = d.toISOString().slice(0, 10)
+    const fim = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+      .replace('. ', '/')
+      .replace('.', '')
+      .replace(/^\w/, (c) => c.toUpperCase())
+    result.push({ label, inicio, fim })
+  }
+  return result
+}

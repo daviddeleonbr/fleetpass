@@ -1,0 +1,261 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient, createServiceClient } from '@/lib/supabase-server'
+import { syncQuantidadeCnpj } from '@/lib/stripe-cnpj'
+
+// ── Geocoding ───────────────────────────────────────────────────────────────
+
+const ESTADO_NOME: Record<string, string> = {
+  AC: 'Acre', AL: 'Alagoas', AP: 'Amapá', AM: 'Amazonas', BA: 'Bahia',
+  CE: 'Ceará', DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás',
+  MA: 'Maranhão', MT: 'Mato Grosso', MS: 'Mato Grosso do Sul',
+  MG: 'Minas Gerais', PA: 'Pará', PB: 'Paraíba', PR: 'Paraná',
+  PE: 'Pernambuco', PI: 'Piauí', RJ: 'Rio de Janeiro',
+  RN: 'Rio Grande do Norte', RS: 'Rio Grande do Sul', RO: 'Rondônia',
+  RR: 'Roraima', SC: 'Santa Catarina', SP: 'São Paulo', SE: 'Sergipe',
+  TO: 'Tocantins',
+}
+
+async function geocode(
+  endereco: string, numero: string, bairro: string,
+  cidade: string, estado: string, cep: string
+): Promise<{ lat: number; lng: number } | null> {
+  const headers = { 'User-Agent': 'FuelLink/1.0', 'Accept-Language': 'pt-BR' }
+  const base = 'https://nominatim.openstreetmap.org/search'
+
+  const tryUrl = async (url: string) => {
+    const res = await fetch(url, { headers })
+    const data = await res.json()
+    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    return null
+  }
+
+  try {
+    const estadoNome = ESTADO_NOME[estado.toUpperCase()] ?? estado
+
+    // 1. Texto livre com bairro — dá contexto geográfico preciso ao Nominatim
+    if (endereco && bairro && cidade) {
+      const parts = [endereco, numero, bairro, cidade, estadoNome, 'Brasil'].filter(Boolean)
+      const r = await tryUrl(`${base}?q=${encodeURIComponent(parts.join(', '))}&format=json&limit=1&countrycodes=br`)
+      if (r) return r
+    }
+
+    // 2. Texto livre sem bairro
+    if (endereco && cidade) {
+      const parts = [endereco, numero, cidade, estadoNome, 'Brasil'].filter(Boolean)
+      const r = await tryUrl(`${base}?q=${encodeURIComponent(parts.join(', '))}&format=json&limit=1&countrycodes=br`)
+      if (r) return r
+    }
+
+    // 3. Busca estruturada (rua + número + cidade + estado)
+    if (endereco && cidade) {
+      const street = numero ? `${numero} ${endereco}` : endereco
+      const r = await tryUrl(`${base}?street=${encodeURIComponent(street)}&city=${encodeURIComponent(cidade)}&state=${encodeURIComponent(estadoNome)}&country=BR&format=json&limit=1`)
+      if (r) return r
+    }
+
+    // 4. CEP
+    if (cep) {
+      const clean = cep.replace(/\D/g, '')
+      if (clean.length === 8) {
+        const r = await tryUrl(`${base}?postalcode=${clean}&country=BR&format=json&limit=1`)
+        if (r) return r
+      }
+    }
+
+    // 5. Cidade + estado (fallback)
+    return await tryUrl(`${base}?city=${encodeURIComponent(cidade)}&state=${encodeURIComponent(estadoNome)}&country=BR&format=json&limit=1`)
+  } catch {
+    return null
+  }
+}
+
+// ── helpers ────────────────────────────────────────────────────────────────
+
+async function getOrCreateContaPostoId(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) return { contaPostoId: null, userId: null, error: 'Não autenticado.' }
+
+  const svc = createServiceClient()
+
+  // Tenta buscar conta existente
+  const { data: conta } = await svc
+    .from('contas_posto')
+    .select('id')
+    .eq('perfil_id', user.id)
+    .single()
+
+  if (conta) return { contaPostoId: conta.id as string, userId: user.id, error: null }
+
+  // Cria conta com plano starter (situação comum em dev ou antes do webhook Stripe chegar)
+  const { data: nova, error: insertError } = await svc
+    .from('contas_posto')
+    .insert({ perfil_id: user.id, plano_id: 'padrao' })
+    .select('id')
+    .single()
+
+  if (insertError || !nova) {
+    return { contaPostoId: null, userId: user.id, error: 'Erro ao inicializar conta de posto.' }
+  }
+  return { contaPostoId: nova.id as string, userId: user.id, error: null }
+}
+
+// ── GET — lista os postos da conta ─────────────────────────────────────────
+
+export async function GET() {
+  try {
+    const supabase = await createClient()
+    const { contaPostoId, error } = await getOrCreateContaPostoId(supabase)
+    if (error) return NextResponse.json({ error }, { status: 401 })
+
+    const { data: postos, error: dbError } = await supabase
+      .from('postos')
+      .select('id, nome, cnpj, bandeira, endereco, numero, bairro, cidade, estado, cep, combustiveis, capacidade, status, lat, lng, asaas_id, asaas_wallet_id')
+      .eq('conta_posto_id', contaPostoId!)
+      .order('created_at', { ascending: true })
+
+    if (dbError) throw dbError
+
+    // Geocodifica postos que ainda não têm coordenadas (sem bloquear resposta)
+    const svcBg = createServiceClient()
+    ;(postos ?? [])
+      .filter((p) => p.lat == null && p.cidade)
+      .forEach(async (p) => {
+        const coords = await geocode(p.endereco ?? '', p.numero ?? '', p.bairro ?? '', p.cidade, p.estado, p.cep ?? '')
+        if (coords) await svcBg.from('postos').update({ lat: coords.lat, lng: coords.lng }).eq('id', p.id)
+      })
+
+    return NextResponse.json({ postos: postos ?? [] })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+
+// ── POST — cria um novo posto ───────────────────────────────────────────────
+
+export async function POST(req: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { contaPostoId, error } = await getOrCreateContaPostoId(supabase)
+    if (error) return NextResponse.json({ error }, { status: 401 })
+
+    const body = await req.json()
+    const { nome, cnpj, bandeira, endereco, numero, complemento, bairro, cidade, estado, cep, combustiveis, capacidade } = body
+
+    if (!nome || !cnpj || !endereco || !cidade || !estado) {
+      return NextResponse.json({ error: 'Campos obrigatórios: nome, cnpj, endereco, cidade, estado.' }, { status: 400 })
+    }
+
+    // Usa coordenadas do mapa se fornecidas; caso contrário, tenta geocoding
+    let lat: number | null = null
+    let lng: number | null = null
+    if (typeof body.lat === 'number' && typeof body.lng === 'number') {
+      lat = body.lat; lng = body.lng
+    } else {
+      const coords = await geocode(endereco, numero ?? '', bairro ?? '', cidade, estado, cep ?? '')
+      lat = coords?.lat ?? null; lng = coords?.lng ?? null
+    }
+
+    const svc = createServiceClient()
+    const { data: posto, error: insertError } = await svc
+      .from('postos')
+      .insert({
+        conta_posto_id:  contaPostoId!,
+        nome,
+        cnpj: cnpj.replace(/\D/g, '').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'),
+        bandeira:        bandeira || 'Independente',
+        endereco:        endereco || '',
+        numero:          numero   || '',
+        complemento:     complemento || null,
+        bairro:          bairro   || '',
+        cidade,
+        estado,
+        cep:             (cep || '').replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2'),
+        combustiveis:    combustiveis || [],
+        capacidade:      capacidade   || null,
+        lat,
+        lng,
+        status:          'ativo',
+        asaas_id:        body.asaasId        ?? null,
+        asaas_wallet_id: body.asaasWalletId  ?? null,
+        asaas_api_key:   body.asaasApiKey    ?? null,
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      if (insertError.message?.toLowerCase().includes('limite')) {
+        return NextResponse.json({ error: insertError.message }, { status: 422 })
+      }
+      throw insertError
+    }
+
+    // Cobrança por CNPJ: ajusta a quantidade da assinatura ao novo total de postos.
+    await syncQuantidadeCnpj(contaPostoId!)
+
+    return NextResponse.json({ posto }, { status: 201 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}
+
+// ── PATCH — edita um posto existente ───────────────────────────────────────
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { contaPostoId, error } = await getOrCreateContaPostoId(supabase)
+    if (error) return NextResponse.json({ error }, { status: 401 })
+
+    const body = await req.json()
+    const { id, ...fields } = body
+
+    if (!id) return NextResponse.json({ error: 'id obrigatório.' }, { status: 400 })
+
+    // Usa coordenadas do mapa se fornecidas; caso contrário, tenta geocoding
+    let patchLat: number | null | undefined = undefined
+    let patchLng: number | null | undefined = undefined
+    if (typeof fields.lat === 'number' && typeof fields.lng === 'number') {
+      patchLat = fields.lat
+      patchLng = fields.lng
+    } else if (fields.cidade && fields.estado) {
+      const coords = await geocode(
+        fields.endereco ?? '', fields.numero ?? '', fields.bairro ?? '',
+        fields.cidade, fields.estado, fields.cep ?? ''
+      )
+      if (coords) { patchLat = coords.lat; patchLng = coords.lng }
+    }
+
+    // Garante que o posto pertence à conta do usuário
+    const svc = createServiceClient()
+    const updatePayload: Record<string, unknown> = {
+      nome:         fields.nome,
+      bandeira:     fields.bandeira,
+      endereco:     fields.endereco,
+      numero:       fields.numero,
+      complemento:  fields.complemento ?? null,
+      bairro:       fields.bairro,
+      cidade:       fields.cidade,
+      estado:       fields.estado,
+      cep:          fields.cep,
+      combustiveis: fields.combustiveis,
+      capacidade:   fields.capacidade ?? null,
+    }
+    if (patchLat !== undefined) { updatePayload.lat = patchLat; updatePayload.lng = patchLng }
+
+    const { data: posto, error: updateError } = await svc
+      .from('postos')
+      .update(updatePayload)
+      .eq('id', id)
+      .eq('conta_posto_id', contaPostoId!)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+    if (!posto) return NextResponse.json({ error: 'Posto não encontrado.' }, { status: 404 })
+
+    return NextResponse.json({ posto })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
