@@ -40,7 +40,6 @@ function EnvVarList({ vars, loading }: { vars: EnvVar[]; loading: boolean }) {
 export default function ConfiguracoesAdminPage() {
   const [webhookUrl, setWebhookUrl] = useState('https://app.fuellink.com.br/api/webhooks/asaas')
   const [notifEmail, setNotifEmail] = useState(true)
-  const [notifNovaSubconta, setNotifNovaSubconta] = useState(true)
   const [notifContestacao, setNotifContestacao] = useState(true)
   const [notifLimiteCredito, setNotifLimiteCredito] = useState(false)
 
@@ -138,7 +137,6 @@ export default function ConfiguracoesAdminPage() {
         <div className="space-y-3">
           {[
             { key: 'email', label: 'Enviar alertas por e-mail', sub: 'Notificações enviadas para o e-mail administrativo', value: notifEmail, set: setNotifEmail },
-            { key: 'subconta', label: 'Nova subconta criada', sub: 'Quando um posto configura sua subconta Asaas', value: notifNovaSubconta, set: setNotifNovaSubconta },
             { key: 'contestacao', label: 'Transação contestada', sub: 'Quando uma empresa contesta um pagamento processado', value: notifContestacao, set: setNotifContestacao },
             { key: 'credito', label: 'Empresa próxima ao limite de crédito', sub: 'Quando uma empresa atingir 80% do limite configurado', value: notifLimiteCredito, set: setNotifLimiteCredito },
           ].map((n) => (

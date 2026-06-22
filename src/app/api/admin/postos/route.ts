@@ -11,7 +11,7 @@ export async function GET() {
     const { data, error } = await svc
       .from('postos')
       .select(`
-        id, nome, cidade, estado, cnpj, status, asaas_id,
+        id, nome, cidade, estado, cnpj, status,
         contas_posto ( plano_id )
       `)
       .order('created_at', { ascending: false })
@@ -24,7 +24,6 @@ export async function GET() {
       uf:         p.estado,
       cnpj:       p.cnpj,
       plano:      p.contas_posto?.plano_id ?? '—',
-      subcontaId: p.asaas_id ?? null,
       status:     p.status, // 'ativo' | 'inativo'
     }))
 

@@ -5,7 +5,8 @@ import { FileDown, Sheet, CalendarDays, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { ABASTECIMENTOS, POSTOS, filtrarPorIntervalo, filtrarPorPosto, labelPeriodo, formatBRL } from '@/lib/relatorios-data'
+import { filtrarPorIntervalo, filtrarPorPosto, labelPeriodo, formatBRL, type Abastecimento } from '@/lib/relatorios-data'
+import { useAbastecimentos } from '@/hooks/use-abastecimentos'
 import { exportarPDF, exportarExcel } from '@/lib/export'
 
 function defaultRange(): DateRange {
@@ -15,7 +16,7 @@ function defaultRange(): DateRange {
   return { inicio: ini, fim }
 }
 
-function agruparPorDia(dados: typeof ABASTECIMENTOS) {
+function agruparPorDia(dados: Abastecimento[]) {
   const mapa: Record<string, { data: string; abastecimentos: number; litros: number; valor: number }> = {}
   for (const a of dados) {
     if (!mapa[a.data]) mapa[a.data] = { data: a.data, abastecimentos: 0, litros: 0, valor: 0 }
@@ -35,6 +36,7 @@ export default function RelatorioPeriodoPage() {
   const [posto, setPosto] = useState('todos')
   const [loadingPDF, setLoadingPDF] = useState(false)
   const [loadingXLS, setLoadingXLS] = useState(false)
+  const { abastecimentos: ABASTECIMENTOS, postos: POSTOS } = useAbastecimentos()
 
   const filtrados = filtrarPorPosto(filtrarPorIntervalo(ABASTECIMENTOS, range.inicio, range.fim), posto)
   const porDia = agruparPorDia(filtrados)

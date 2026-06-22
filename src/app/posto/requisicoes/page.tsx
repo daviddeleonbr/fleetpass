@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Search, ChevronDown, ChevronRight, QrCode, Store, X,
   CheckCircle2, Clock, User, Fuel, Gauge, Car, MapPin,
-  Calendar, AlertCircle, Lock,
+  Calendar, AlertCircle, Lock, Loader2,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -34,37 +34,6 @@ interface Requisicao {
   status: Status
   validacao?: Validacao
 }
-
-const POSTOS = ['Shell — Centro', 'Shell — Norte']
-
-const requisicoes: Requisicao[] = [
-  {
-    id: 'FL-XK9-3P2', posto: 'Shell — Centro', criadaEm: '10/03/2025', empresa: 'TransLog Transportes',
-    veiculo: 'ABC-1234', motorista: 'Roberto Lima', combustivel: 'Diesel S-10', limite: 'R$ 300',
-    validade: '12/03/2025', status: 'concluido',
-    validacao: { dataHora: '10/03/2025 às 14h32', frentista: 'José Almeida', litros: '46,8 L', valorCobrado: 'R$ 299,52', hodometro: '87.340 km' },
-  },
-  {
-    id: 'FL-MN2-5T8', posto: 'Shell — Centro', criadaEm: '09/03/2025', empresa: 'TransLog Transportes',
-    veiculo: 'GHI-9012', motorista: 'Carlos Santos', combustivel: 'Gasolina Comum', limite: 'R$ 450',
-    validade: '14/03/2025', status: 'ativo',
-  },
-  {
-    id: 'FL-PQ3-8U0', posto: 'Shell — Norte', criadaEm: '08/03/2025', empresa: 'LogBR Express',
-    veiculo: 'LBR-9999', motorista: 'Sandro Mota', combustivel: 'Diesel S-10', limite: 'R$ 500',
-    validade: '13/03/2025', status: 'ativo',
-  },
-  {
-    id: 'FL-RS5-2V9', posto: 'Shell — Centro', criadaEm: '08/03/2025', empresa: 'Construtora Alpha',
-    veiculo: 'CAL-5678', motorista: 'Pedro Gomes', combustivel: 'Gasolina Comum', limite: 'R$ 200',
-    validade: '13/03/2025', status: 'pendente',
-  },
-  {
-    id: 'FL-AB4-7R1', posto: 'Shell — Norte', criadaEm: '07/03/2025', empresa: 'Turbo Fretes',
-    veiculo: 'TFR-3456', motorista: 'Raimundo Neto', combustivel: 'Etanol', limite: 'R$ 150',
-    validade: '09/03/2025', status: 'expirado',
-  },
-]
 
 function PostoChip({ nome }: { nome: string }) {
   return (
@@ -207,6 +176,19 @@ export default function RequisioesPostoPage() {
   const [filtroPosto, setFiltroPosto] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
 
+  const [requisicoes, setRequisicoes] = useState<Requisicao[]>([])
+  const [postos, setPostos] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/posto/requisicoes')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then((d) => { setRequisicoes(d.requisicoes ?? []); setPostos(d.postos ?? []) })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Erro ao carregar.'))
+      .finally(() => setLoading(false))
+  }, [])
+
   const ativas     = requisicoes.filter((r) => r.status === 'ativo' || r.status === 'pendente')
   const concluidas = requisicoes.filter((r) => r.status === 'concluido')
   const expiradas  = requisicoes.filter((r) => r.status === 'expirado')
@@ -227,7 +209,7 @@ export default function RequisioesPostoPage() {
       const matchPosto  = !filtroPosto || r.posto === filtroPosto
       return matchSearch && matchPosto
     })
-  }, [tab, search, filtroPosto])
+  }, [tab, search, filtroPosto, requisicoes])
 
   const temFiltro = search !== '' || filtroPosto !== ''
 
@@ -259,7 +241,7 @@ export default function RequisioesPostoPage() {
             className="pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 appearance-none cursor-pointer"
           >
             <option value="">Todos os postos</option>
-            {POSTOS.map((p) => <option key={p} value={p}>{p}</option>)}
+            {postos.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         {temFiltro && (
@@ -276,13 +258,25 @@ export default function RequisioesPostoPage() {
       </div>
 
       <Card padding="none">
-        {currentList.length === 0 ? (
+        {error ? (
+          <div className="flex items-center justify-center gap-2 py-14 text-sm text-red-500">
+            <AlertCircle size={16} /> {error}
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center gap-2 py-14 text-gray-400">
+            <Loader2 size={20} className="animate-spin" /> <span className="text-sm">Carregando requisições…</span>
+          </div>
+        ) : currentList.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 gap-2">
             <Search size={24} className="text-gray-200" />
-            <p className="text-sm font-medium text-gray-400">Nenhuma requisição encontrada</p>
-            <button onClick={() => { setSearch(''); setFiltroPosto('') }} className="text-xs text-blue-500 hover:underline mt-1">
-              Limpar filtros
-            </button>
+            <p className="text-sm font-medium text-gray-400">
+              {requisicoes.length === 0 ? 'Nenhuma requisição recebida ainda.' : 'Nenhuma requisição encontrada'}
+            </p>
+            {requisicoes.length > 0 && (
+              <button onClick={() => { setSearch(''); setFiltroPosto('') }} className="text-xs text-blue-500 hover:underline mt-1">
+                Limpar filtros
+              </button>
+            )}
           </div>
         ) : (
           <table className="w-full">

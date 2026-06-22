@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardHeader } from '@/components/ui/card'
 import {
   Store, Building2, FileText, Droplets, TrendingUp,
-  DollarSign, Receipt, CreditCard, AlertTriangle, CheckCircle2, Loader2,
+  DollarSign, Receipt, AlertTriangle, CheckCircle2, Loader2,
 } from 'lucide-react'
 
 const formatBRL = (v: number) =>
@@ -13,12 +13,11 @@ const formatBRL = (v: number) =>
 interface DashboardData {
   kpis: {
     totalPostos: number; totalEmpresas: number; requisicoesMes: number; volumeMes: number
-    gmvMes: number; receitaMes: number; faturas: number; subcontas: number; taxaPct: number
+    gmvMes: number; receitaMes: number; faturas: number; taxaPct: number
   }
   volumeCombustivel: { tipo: string; percentual: number }[]
   crescimentoPostos: { mes: string; valor: number }[]
   recentTxs: { id: string; empresa: string; posto: string; valor: number; data: string; status: string }[]
-  postosSemSubconta: number
 }
 
 const colorMap: Record<string, { bg: string; text: string; icon: string }> = {
@@ -77,7 +76,6 @@ export default function AdminDashboard() {
     { label: 'GMV/mês', value: formatBRL(k.gmvMes), icon: TrendingUp, color: 'emerald' },
     { label: `Receita FuelLink (${k.taxaPct}%)`, value: formatBRL(k.receitaMes), icon: DollarSign, color: 'indigo' },
     { label: 'Faturas', value: String(k.faturas), icon: Receipt, color: 'amber' },
-    { label: 'Subcontas Asaas', value: String(k.subcontas), icon: CreditCard, color: 'purple' },
   ]
   const maxPosto = Math.max(1, ...data.crescimentoPostos.map(d => d.valor))
 
@@ -197,26 +195,13 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader title="Alertas" subtitle="Itens que precisam de atenção" />
             <div className="space-y-3">
-              {data.postosSemSubconta > 0 && (
-                <div className="flex gap-3 p-3 rounded-lg bg-amber-50">
-                  <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-700">
-                      {data.postosSemSubconta} posto{data.postosSemSubconta !== 1 ? 's' : ''} sem subconta Asaas
-                    </p>
-                    <p className="text-xs mt-0.5 text-amber-600">Configure para habilitar o recebimento via split.</p>
-                  </div>
+              <div className="flex gap-3 p-3 rounded-lg bg-green-50">
+                <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-green-700">Tudo em ordem</p>
+                  <p className="text-xs mt-0.5 text-green-600">Sem alertas pendentes.</p>
                 </div>
-              )}
-              {data.postosSemSubconta === 0 && (
-                <div className="flex gap-3 p-3 rounded-lg bg-green-50">
-                  <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-green-700">Tudo em ordem</p>
-                    <p className="text-xs mt-0.5 text-green-600">Sem alertas pendentes.</p>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </Card>
         </div>

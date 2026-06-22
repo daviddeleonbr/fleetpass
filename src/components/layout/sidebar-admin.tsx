@@ -3,10 +3,11 @@
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Store, Building2, ArrowLeftRight,
-  CreditCard, FileText, Settings, ShieldCheck, Layers,
+  FileText, Settings, ShieldCheck, Layers,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { usePerfilAtual } from '@/hooks/use-perfil-atual'
 
 interface NavItem {
   label: string
@@ -19,7 +20,6 @@ const navItems: NavItem[] = [
   { label: 'Postos', href: '/admin/postos', icon: Store },
   { label: 'Empresas', href: '/admin/empresas', icon: Building2 },
   { label: 'Transações', href: '/admin/transacoes', icon: ArrowLeftRight },
-{ label: 'Subcontas Asaas', href: '/admin/subcontas', icon: CreditCard },
   { label: 'Notas Fiscais', href: '/admin/notas', icon: FileText },
   { label: 'Planos Stripe', href: '/admin/planos', icon: Layers },
   { label: 'Configurações', href: '/admin/configuracoes', icon: Settings },
@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
 
 export function SidebarAdmin() {
   const pathname = usePathname()
+  const { perfil } = usePerfilAtual()
 
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin'
@@ -76,14 +77,14 @@ export function SidebarAdmin() {
           )}
         >
           <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-white">AS</span>
+            <span className="text-xs font-bold text-white uppercase">{perfil?.iniciais ?? '·'}</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className={cn(
               'text-sm font-medium truncate',
               pathname.startsWith('/admin/perfil') ? 'text-indigo-700' : 'text-gray-700'
             )}>
-              Admin Sistema
+              {perfil?.nome ?? '…'}
             </p>
             <p className="text-[11px] text-gray-400 truncate">Ver perfil</p>
           </div>

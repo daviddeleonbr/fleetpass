@@ -13,11 +13,10 @@ interface Posto {
   uf: string
   cnpj: string
   plano: string
-  subcontaId: string | null
   status: PostoStatus
 }
 
-type FilterTab = 'todos' | 'ativos' | 'inativos' | 'sem-subconta'
+type FilterTab = 'todos' | 'ativos' | 'inativos'
 
 export default function PostosAdminPage() {
   const [postos, setPostos] = useState<Posto[]>([])
@@ -42,8 +41,7 @@ export default function PostosAdminPage() {
     const matchTab =
       filterTab === 'todos' ? true
       : filterTab === 'ativos' ? p.status === 'ativo'
-      : filterTab === 'inativos' ? p.status === 'inativo'
-      : p.subcontaId === null
+      : p.status === 'inativo'
     return matchSearch && matchTab
   })
 
@@ -51,7 +49,6 @@ export default function PostosAdminPage() {
     { key: 'todos', label: 'Todos', count: postos.length },
     { key: 'ativos', label: 'Ativos', count: postos.filter(p => p.status === 'ativo').length },
     { key: 'inativos', label: 'Inativos', count: postos.filter(p => p.status === 'inativo').length },
-    { key: 'sem-subconta', label: 'Sem subconta', count: postos.filter(p => p.subcontaId === null).length },
   ]
 
   return (
@@ -112,7 +109,6 @@ export default function PostosAdminPage() {
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Cidade/UF</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">CNPJ</th>
                   <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Plano</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Subconta Asaas</th>
                   <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
                   <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Ações</th>
                 </tr>
@@ -127,19 +123,6 @@ export default function PostosAdminPage() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 capitalize">
                         {p.plano}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {p.subcontaId ? (
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 size={14} className="text-green-500 shrink-0" />
-                          <span className="text-xs font-mono text-gray-600">{p.subcontaId}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <AlertCircle size={14} className="text-amber-500 shrink-0" />
-                          <span className="text-xs text-amber-600 font-medium">Pendente</span>
-                        </div>
-                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       {p.status === 'ativo' ? (

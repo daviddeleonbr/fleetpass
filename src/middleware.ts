@@ -9,6 +9,9 @@ const PUBLIC_ROUTES = [
   '/cadastro/posto',
   '/cadastro/posto/sucesso',
   '/recuperar-senha',
+  // Callback de verificação do link de recuperação (verifyOtp) — acontece antes
+  // de existir sessão, então precisa ser público.
+  '/auth',
   // Tela de validação do frentista: faz o próprio login (modelo terminal/quiosque).
   // O acesso aos dados é protegido nas rotas de API, não aqui.
   '/frentista/validar',

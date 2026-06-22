@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Store, Building2, CheckCircle2, Clock, AlertCircle, DollarSign, Droplets, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Mail, MessageCircle } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Store, Building2, CheckCircle2, Clock, AlertCircle, DollarSign, Droplets, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Mail, MessageCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs } from '@/components/ui/tabs'
@@ -22,6 +22,7 @@ type Abastecimento = {
 
 type Faturamento = {
   id: string
+  parceriaId?: string
   empresa: string
   cnpj: string
   posto: string
@@ -35,166 +36,6 @@ type Faturamento = {
   valor: number
   status: StatusFat
   detalhe: Abastecimento[]
-}
-
-const MOCK: Faturamento[] = [
-  {
-    id: 'fat-001',
-    empresa: 'TransLog Transportes',
-    cnpj: '00.000.000/0001-00',
-    posto: 'Shell — Centro',
-    ciclo: 'Mensal + 5 dias',
-    descCiclo: 'Vende o mês inteiro → fatura no dia 01 → vence no dia 05',
-    periodo: { inicio: '01/02/2026', fim: '28/02/2026' },
-    dataFaturamento: '01/03/2026',
-    dataPagamento: '05/03/2026',
-    abastecimentos: 5,
-    litros: 293,
-    valor: 1865.27,
-    status: 'enviado',
-    detalhe: [
-      { codigo: 'FL-BB2-2B1', data: '02/02/2026', veiculo: 'JKL-3456', motorista: 'Rafael Melo',   combustivel: 'Diesel S-10',    litros: 72, valor: 455.04 },
-      { codigo: 'FL-BB2-2B5', data: '14/02/2026', veiculo: 'ABC-1234', motorista: 'Carlos Santos', combustivel: 'Diesel S-10',    litros: 48, valor: 303.36 },
-      { codigo: 'FL-BB2-2B9', data: '27/02/2026', veiculo: 'GHI-9012', motorista: 'Carlos Santos', combustivel: 'Gasolina Comum', litros: 33, valor: 181.83 },
-      { codigo: 'FL-BB2-2B8', data: '25/02/2026', veiculo: 'CAL-6789', motorista: 'Marcos Lima',   combustivel: 'Diesel Comum',   litros: 48, valor: 276.00 },
-      { codigo: 'FL-BB2-2B3', data: '10/02/2026', veiculo: 'CAL-5678', motorista: 'Pedro Gomes',   combustivel: 'Gasolina Comum', litros: 32, valor: 176.32 },
-    ],
-  },
-  {
-    id: 'fat-002',
-    empresa: 'Construtora Alpha',
-    cnpj: '22.222.222/0001-22',
-    posto: 'Shell — Centro',
-    ciclo: 'Semanal + 5 dias',
-    descCiclo: 'Vende de seg a dom → fatura na seg → paga em 5 dias',
-    periodo: { inicio: '09/03/2026', fim: '15/03/2026' },
-    dataFaturamento: '16/03/2026',
-    dataPagamento: '21/03/2026',
-    abastecimentos: 3,
-    litros: 98,
-    valor: 549.08,
-    status: 'pendente',
-    detalhe: [
-      { codigo: 'FL-RN2-7P1', data: '03/03/2026', veiculo: 'CAL-5678', motorista: 'Pedro Gomes',  combustivel: 'Gasolina Comum', litros: 35, valor: 194.95 },
-      { codigo: 'FL-SX9-0G5', data: '05/03/2026', veiculo: 'CAL-5678', motorista: 'Pedro Gomes',  combustivel: 'Gasolina Comum', litros: 28, valor: 155.96 },
-      { codigo: 'FL-BB2-2B3', data: '10/02/2026', veiculo: 'CAL-6789', motorista: 'Marcos Lima',  combustivel: 'Diesel Comum',   litros: 35, valor: 198.17 },
-    ],
-  },
-  {
-    id: 'fat-003',
-    empresa: 'Turbo Fretes',
-    cnpj: '33.333.333/0001-33',
-    posto: 'Shell — Norte',
-    ciclo: 'Diário (a cada 2 dias) + 2 dias',
-    descCiclo: 'Vende por 2 dias → fatura → paga em 2 dias',
-    periodo: { inicio: '11/03/2026', fim: '12/03/2026' },
-    dataFaturamento: '13/03/2026',
-    dataPagamento: '15/03/2026',
-    abastecimentos: 1,
-    litros: 25,
-    valor: 139.25,
-    status: 'pendente',
-    detalhe: [
-      { codigo: 'FL-GF3-5J8', data: '07/03/2026', veiculo: 'TFR-8901', motorista: 'Claudia Sousa', combustivel: 'Gasolina Comum', litros: 25, valor: 139.25 },
-    ],
-  },
-  {
-    id: 'fat-007',
-    empresa: 'TransLog Transportes',
-    cnpj: '00.000.000/0001-00',
-    posto: 'Shell — Centro',
-    ciclo: 'Mensal + 5 dias',
-    descCiclo: 'Vende o mês inteiro → fatura no dia 01 → vence no dia 05',
-    periodo: { inicio: '01/03/2026', fim: '31/03/2026' },
-    dataFaturamento: '01/04/2026',
-    dataPagamento: '05/04/2026',
-    abastecimentos: 11,
-    litros: 684,
-    valor: 4318.90,
-    status: 'pendente',
-    detalhe: [
-      { codigo: 'FL-CC1-1C1', data: '01/03/2026', veiculo: 'ABC-1234', motorista: 'Carlos Santos', combustivel: 'Diesel S-10',    litros: 65, valor: 411.45 },
-      { codigo: 'FL-CC1-1C2', data: '03/03/2026', veiculo: 'GHI-9012', motorista: 'Rafael Melo',   combustivel: 'Diesel S-10',    litros: 58, valor: 366.66 },
-      { codigo: 'FL-CC1-1C3', data: '05/03/2026', veiculo: 'DEF-5678', motorista: 'Ana Costa',     combustivel: 'Gasolina Comum', litros: 40, valor: 222.80 },
-      { codigo: 'FL-CC1-1C4', data: '07/03/2026', veiculo: 'JKL-3456', motorista: 'Marcos Lima',   combustivel: 'Diesel S-10',    litros: 72, valor: 455.04 },
-      { codigo: 'FL-CC1-1C5', data: '10/03/2026', veiculo: 'ABC-1234', motorista: 'Carlos Santos', combustivel: 'Diesel S-10',    litros: 55, valor: 347.60 },
-      { codigo: 'FL-CC1-1C6', data: '13/03/2026', veiculo: 'GHI-9012', motorista: 'Rafael Melo',   combustivel: 'Gasolina Comum', litros: 38, valor: 211.66 },
-      { codigo: 'FL-CC1-1C7', data: '15/03/2026', veiculo: 'CAL-5678', motorista: 'Pedro Gomes',   combustivel: 'Diesel S-10',    litros: 80, valor: 505.60 },
-      { codigo: 'FL-CC1-1C8', data: '18/03/2026', veiculo: 'DEF-5678', motorista: 'Ana Costa',     combustivel: 'Diesel S-10',    litros: 62, valor: 391.82 },
-      { codigo: 'FL-CC1-1C9', data: '21/03/2026', veiculo: 'JKL-3456', motorista: 'Marcos Lima',   combustivel: 'Gasolina Comum', litros: 45, valor: 250.65 },
-      { codigo: 'FL-CC1-2C0', data: '25/03/2026', veiculo: 'ABC-1234', motorista: 'Carlos Santos', combustivel: 'Diesel S-10',    litros: 70, valor: 442.40 },
-      { codigo: 'FL-CC1-2C1', data: '29/03/2026', veiculo: 'GHI-9012', motorista: 'Rafael Melo',   combustivel: 'Diesel Comum',   litros: 99, valor: 713.22 },
-    ],
-  },
-  {
-    id: 'fat-004',
-    empresa: 'LogBR Express',
-    cnpj: '11.111.111/0001-11',
-    posto: 'Shell — Norte',
-    ciclo: 'Quinzenal + 7 dias',
-    descCiclo: '2 ciclos/mês: dias 01–15 (fatura dia 16, vence dia 22) · dias 16–último (fatura dia 01, vence dia 07)',
-    periodo: { inicio: '01/03/2026', fim: '15/03/2026' },
-    dataFaturamento: '16/03/2026',
-    dataPagamento: '22/03/2026',
-    abastecimentos: 3,
-    litros: 190,
-    valor: 1214.61,
-    status: 'enviado',
-    detalhe: [
-      { codigo: 'FL-XK9-3P2', data: '01/03/2026', veiculo: 'LBR-9999', motorista: 'Sandro Mota',    combustivel: 'Diesel S-10', litros: 65, valor: 415.35 },
-      { codigo: 'FL-HJ8-6M3', data: '03/03/2026', veiculo: 'LBR-5566', motorista: 'Diego Pires',    combustivel: 'Diesel S-10', litros: 55, valor: 351.45 },
-      { codigo: 'FL-BB2-2B7', data: '07/03/2026', veiculo: 'LBR-1234', motorista: 'Fernanda Ramos', combustivel: 'Diesel S-10', litros: 70, valor: 447.81 },
-    ],
-  },
-  {
-    id: 'fat-005',
-    empresa: 'TransLog Transportes',
-    cnpj: '00.000.000/0001-00',
-    posto: 'Shell — Centro',
-    ciclo: 'Mensal + 5 dias',
-    descCiclo: 'Vende o mês inteiro → fatura no dia 01 → vence no dia 05',
-    periodo: { inicio: '01/01/2026', fim: '31/01/2026' },
-    dataFaturamento: '01/02/2026',
-    dataPagamento: '05/02/2026',
-    abastecimentos: 3,
-    litros: 178,
-    valor: 1112.50,
-    status: 'enviado',
-    detalhe: [
-      { codigo: 'FL-AA1-1A1', data: '03/01/2026', veiculo: 'ABC-1234', motorista: 'Carlos Santos', combustivel: 'Diesel S-10', litros: 50, valor: 312.50 },
-      { codigo: 'FL-AA1-1A4', data: '14/01/2026', veiculo: 'GHI-9012', motorista: 'Carlos Santos', combustivel: 'Diesel S-10', litros: 60, valor: 375.00 },
-      { codigo: 'FL-AA1-1A8', data: '28/01/2026', veiculo: 'DEF-5678', motorista: 'Ana Costa',     combustivel: 'Diesel S-10', litros: 68, valor: 425.00 },
-    ],
-  },
-  {
-    id: 'fat-006',
-    empresa: 'TransRota Logística',
-    cnpj: '44.444.444/0001-44',
-    posto: 'Shell — Norte',
-    ciclo: 'Quinzenal + 7 dias',
-    descCiclo: '2 ciclos/mês: dias 01–15 (fatura dia 16, vence dia 22) · dias 16–último (fatura dia 01, vence dia 07)',
-    periodo: { inicio: '16/01/2026', fim: '31/01/2026' },
-    dataFaturamento: '01/02/2026',
-    dataPagamento: '07/02/2026',
-    abastecimentos: 2,
-    litros: 94,
-    valor: 793.25,
-    status: 'enviado',
-    detalhe: [
-      { codigo: 'FL-BB2-2B6', data: '18/02/2026', veiculo: 'TRL-9988', motorista: 'Robson Freitas',  combustivel: 'Gasolina Aditivada', litros: 36, valor: 217.80 },
-      { codigo: 'FL-AA1-1A6', data: '21/01/2026', veiculo: 'TRL-2345', motorista: 'João Batista',   combustivel: 'Diesel S-10',        litros: 58, valor: 575.45 },
-    ],
-  },
-]
-
-// Contatos de faturamento por empresa (espelha os dados do contrato)
-// Contatos por empresa para envio de fatura
-const CONTATOS_EMPRESA: Record<string, { emails: string[]; whatsapp: string[] }> = {
-  'TransLog Transportes': { emails: ['financeiro@translog.com.br', 'contabilidade@translog.com.br'], whatsapp: ['+55 11 99999-0001', '+55 11 98888-0002'] },
-  'LogBR Express':        { emails: ['financeiro@logbr.com.br'],                                     whatsapp: ['+55 11 97777-0003'] },
-  'Construtora Alpha':    { emails: ['adm@construtoraalpha.com.br', 'pagamentos@construtoraalpha.com.br'], whatsapp: ['+55 11 96666-0004'] },
-  'Turbo Fretes':         { emails: ['contas@turbofretes.com.br'],                                   whatsapp: ['+55 11 95555-0005', '+55 11 94444-0006'] },
-  'TransRota Logística':  { emails: ['financeiro@transrota.com.br'],                                 whatsapp: ['+55 11 93333-0007'] },
 }
 
 const STATUS_CFG: Record<StatusFat, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
@@ -334,10 +175,25 @@ function FaturamentoCard({
 
 export default function FaturamentoPage() {
   const [tab, setTab] = useState('pendente')
-  const [lista, setLista] = useState<Faturamento[]>(MOCK)
+  const [lista, setLista] = useState<Faturamento[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [fecharModal, setFecharModal] = useState<Faturamento | null>(null)
+  const [fechando, setFechando] = useState(false)
+  const [fecharErro, setFecharErro] = useState('')
   const [detalhesPag, setDetalhesPag] = useState(1)
   const DETALHES_POR_PAG = 4
+
+  const carregar = useCallback(() => {
+    setLoading(true)
+    fetch('/api/posto/faturamento')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then((d) => setLista(d.faturamentos ?? []))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Erro ao carregar.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { carregar() }, [carregar])
 
   const pendentes  = lista.filter((f) => f.status === 'pendente')
   const enviados   = lista.filter((f) => f.status === 'enviado')
@@ -349,14 +205,30 @@ export default function FaturamentoPage() {
 
   function abrirFecharModal(f: Faturamento) {
     setFecharModal(f)
+    setFecharErro('')
     setDetalhesPag(1)
   }
 
-  function confirmarFechamento() {
-    if (!fecharModal) return
-    setLista((prev) => prev.map((f) => f.id === fecharModal.id ? { ...f, status: 'enviado' } : f))
-    setFecharModal(null)
-    setTab('enviado')
+  async function confirmarFechamento() {
+    if (!fecharModal?.parceriaId) return
+    setFechando(true)
+    setFecharErro('')
+    try {
+      const res = await fetch('/api/posto/faturamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parceriaId: fecharModal.parceriaId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao fechar faturamento.')
+      setFecharModal(null)
+      setTab('enviado')
+      carregar()
+    } catch (e) {
+      setFecharErro(e instanceof Error ? e.message : 'Erro ao fechar faturamento.')
+    } finally {
+      setFechando(false)
+    }
   }
 
   const totalValor = (items: Faturamento[]) => items.reduce((s, f) => s + f.valor, 0)
@@ -393,8 +265,24 @@ export default function FaturamentoPage() {
 
       <Tabs tabs={tabs} activeTab={tab} onChange={setTab} />
 
-      {tab === 'pendente'  && renderLista(pendentes, 'pendente')}
-      {tab === 'enviado'   && renderLista(enviados,  'enviado')}
+      {error ? (
+        <Card padding="md">
+          <div className="flex items-center justify-center gap-2 py-6 text-sm text-red-500">
+            <AlertCircle size={16} /> {error}
+          </div>
+        </Card>
+      ) : loading ? (
+        <Card padding="md">
+          <div className="flex items-center justify-center gap-2 py-6 text-gray-400">
+            <Loader2 size={18} className="animate-spin" /> <span className="text-sm">Carregando faturamentos…</span>
+          </div>
+        </Card>
+      ) : (
+        <>
+          {tab === 'pendente'  && renderLista(pendentes, 'pendente')}
+          {tab === 'enviado'   && renderLista(enviados,  'enviado')}
+        </>
+      )}
 
       {/* ── Modal: Fechar faturamento ──────────────────────────── */}
       <Modal
@@ -404,7 +292,7 @@ export default function FaturamentoPage() {
         size="md"
       >
         {fecharModal && (() => {
-          const contatos = CONTATOS_EMPRESA[fecharModal.empresa] ?? { emails: [], whatsapp: [] }
+          const contatos: { emails: string[]; whatsapp: string[] } = { emails: [], whatsapp: [] }
 
           return (
             <div className="space-y-2.5 overflow-y-auto">
@@ -535,9 +423,15 @@ export default function FaturamentoPage() {
                 </p>
               </div>
 
+              {fecharErro && (
+                <div className="flex items-center gap-2 px-2.5 py-2 bg-red-50 border border-red-100 rounded-lg text-[11px] text-red-600">
+                  <AlertCircle size={12} className="shrink-0" /> {fecharErro}
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <Button variant="secondary" className="flex-1" onClick={() => setFecharModal(null)}>Cancelar</Button>
-                <Button className="flex-1" onClick={confirmarFechamento}>
+                <Button variant="secondary" className="flex-1" onClick={() => setFecharModal(null)} disabled={fechando}>Cancelar</Button>
+                <Button className="flex-1" onClick={confirmarFechamento} isLoading={fechando} disabled={fechando}>
                   <FileText size={13} /> Fechar faturamento
                 </Button>
               </div>

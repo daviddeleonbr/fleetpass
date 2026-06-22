@@ -109,7 +109,7 @@ export async function GET() {
 
     const { data: postos, error: dbError } = await supabase
       .from('postos')
-      .select('id, nome, cnpj, bandeira, endereco, numero, bairro, cidade, estado, cep, combustiveis, capacidade, status, lat, lng, asaas_id, asaas_wallet_id')
+      .select('id, nome, cnpj, bandeira, endereco, numero, bairro, cidade, estado, cep, combustiveis, capacidade, status, lat, lng')
       .eq('conta_posto_id', contaPostoId!)
       .order('created_at', { ascending: true })
 
@@ -175,9 +175,6 @@ export async function POST(req: NextRequest) {
         lat,
         lng,
         status:          'ativo',
-        asaas_id:        body.asaasId        ?? null,
-        asaas_wallet_id: body.asaasWalletId  ?? null,
-        asaas_api_key:   body.asaasApiKey    ?? null,
       })
       .select()
       .single()

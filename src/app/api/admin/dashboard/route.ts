@@ -20,13 +20,12 @@ export async function GET() {
     }
 
     const [
-      totalPostos, totalEmpresas, requisicoesMes, subcontas, faturas,
+      totalPostos, totalEmpresas, requisicoesMes, faturas,
       { data: abastMes }, { data: recentes }, { data: postosDatas },
     ] = await Promise.all([
       count('postos'),
       count('empresas'),
       count('requisicoes', (q: any) => q.gte('created_at', inicioMes)),
-      count('postos', (q: any) => q.not('asaas_id', 'is', null)),
       count('faturamentos'),
       svc.from('abastecimentos').select('combustivel, litros, valor').gte('data', inicioMes),
       svc.from('abastecimentos')
@@ -68,12 +67,11 @@ export async function GET() {
     return NextResponse.json({
       kpis: {
         totalPostos, totalEmpresas, requisicoesMes, volumeMes,
-        gmvMes, receitaMes, faturas, subcontas, taxaPct,
+        gmvMes, receitaMes, faturas, taxaPct,
       },
       volumeCombustivel,
       crescimentoPostos: meses,
       recentTxs,
-      postosSemSubconta: totalPostos - subcontas,
     })
   } catch (err) {
     console.error('[admin/dashboard]', err)

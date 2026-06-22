@@ -9,7 +9,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { ABASTECIMENTOS, POSTOS, filtrarPorIntervalo, filtrarPorPosto, slugToEmpresa, labelPeriodo, formatBRL } from '@/lib/relatorios-data'
+import { filtrarPorIntervalo, filtrarPorPosto, slugToEmpresa, labelPeriodo, formatBRL } from '@/lib/relatorios-data'
+import { useAbastecimentos } from '@/hooks/use-abastecimentos'
 import { exportarExtrato, exportarExcel } from '@/lib/export'
 import { cn } from '@/lib/utils'
 
@@ -42,6 +43,7 @@ export default function DetalheEmpresaPage({ params }: { params: Promise<{ slug:
   const [loadingPDF, setLoadingPDF] = useState(false)
   const [loadingXLS, setLoadingXLS] = useState(false)
   const [filtroStatus, setFiltroStatus] = useState<string>('todos')
+  const { abastecimentos: ABASTECIMENTOS, postos: POSTOS, loading } = useAbastecimentos()
 
   const nomeEmpresa = slugToEmpresa(slug)
 
@@ -58,7 +60,7 @@ export default function DetalheEmpresaPage({ params }: { params: Promise<{ slug:
   // Todos os registros da empresa (sem filtro de data) para exibir dados fixos como contatos
   const todosEmpresa = ABASTECIMENTOS.filter((a) => a.empresa.toLowerCase() === nomeEmpresa.toLowerCase())
 
-  if (todosEmpresa.length === 0) {
+  if (!loading && todosEmpresa.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <XCircle size={32} className="text-gray-300" />

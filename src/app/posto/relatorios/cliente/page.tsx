@@ -1,17 +1,24 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { Search, Clock, ArrowRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Clock, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
-const CLIENTES = [
-  { id: 1, empresa: 'TransLog Transportes',  cnpj: '12.345.678/0001-99', cidade: 'São Paulo, SP',  desde: '15/01/2025', status: 'ativo'     as const, totalAbast: 62, totalValor: 78240,  totalEventos: 16, bloqueios: 1, ultimoEvento: 'Veículo DEF-5678 bloqueado',            ultimaData: '12/03/2025' },
-  { id: 2, empresa: 'LogBR Express',          cnpj: '22.333.444/0001-55', cidade: 'São Paulo, SP',  desde: '01/03/2025', status: 'ativo'     as const, totalAbast: 18, totalValor: 24100,  totalEventos:  7, bloqueios: 0, ultimoEvento: 'Novo motorista cadastrado',              ultimaData: '12/03/2025' },
-  { id: 3, empresa: 'Construtora Alpha',      cnpj: '98.765.432/0001-00', cidade: 'São Paulo, SP',  desde: '20/02/2025', status: 'bloqueado' as const, totalAbast: 34, totalValor: 42680,  totalEventos: 10, bloqueios: 2, ultimoEvento: 'Bloqueio automático por limite atingido', ultimaData: '14/03/2025' },
-  { id: 4, empresa: 'Turbo Fretes',           cnpj: '33.444.555/0001-66', cidade: 'Guarulhos, SP', desde: '20/02/2025', status: 'ativo'     as const, totalAbast: 28, totalValor: 31500,  totalEventos:  8, bloqueios: 0, ultimoEvento: '3º abastecimento do ciclo',              ultimaData: '13/03/2025' },
-  { id: 5, empresa: 'TransRota Logística',    cnpj: '66.777.888/0001-99', cidade: 'São Paulo, SP',  desde: '10/01/2025', status: 'ativo'     as const, totalAbast: 41, totalValor: 52300,  totalEventos: 11, bloqueios: 1, ultimoEvento: 'Motorista reativado',                   ultimaData: '08/03/2025' },
-]
+interface Cliente {
+  id: string
+  empresa: string
+  cnpj: string
+  cidade: string
+  desde: string
+  status: 'ativo' | 'bloqueado'
+  totalAbast: number
+  totalValor: number
+  totalEventos: number
+  bloqueios: number
+  ultimoEvento: string
+  ultimaData: string
+}
 
 function formatBRL(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -19,8 +26,19 @@ function formatBRL(v: number) {
 
 export default function RelatorioClienteListPage() {
   const [busca, setBusca] = useState('')
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const filtrados = CLIENTES.filter(c =>
+  useEffect(() => {
+    fetch('/api/posto/relatorios/cliente')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then((d) => setClientes(d.clientes ?? []))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Erro ao carregar.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filtrados = clientes.filter(c =>
     c.empresa.toLowerCase().includes(busca.toLowerCase()) ||
     c.cnpj.includes(busca)
   )
@@ -50,6 +68,20 @@ export default function RelatorioClienteListPage() {
         />
       </div>
 
+      {error ? (
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-red-500">
+          <AlertCircle size={16} /> {error}
+        </div>
+      ) : loading ? (
+        <div className="flex items-center justify-center gap-2 py-16 text-gray-400">
+          <Loader2 size={20} className="animate-spin" /> <span className="text-sm">Carregando clientes…</span>
+        </div>
+      ) : clientes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-2 text-gray-400">
+          <Clock size={28} className="opacity-30" />
+          <p className="text-sm font-medium">Nenhuma empresa parceira ainda.</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filtrados.map(c => (
           <Link key={c.id} href={`/posto/relatorios/cliente/${c.id}`}>
@@ -97,6 +129,7 @@ export default function RelatorioClienteListPage() {
           </Link>
         ))}
       </div>
+      )}
     </div>
   )
 }

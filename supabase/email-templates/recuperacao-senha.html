@@ -1,0 +1,109 @@
+<!--
+  FuelLink — E-mail de recuperação de senha
+  Cole em: Supabase → Authentication → Email Templates → "Reset Password"
+  Requisitos:
+    • Site URL = https://fuellink-zeta.vercel.app  (Authentication → URL Configuration)
+    • O botão aponta para /auth/recuperar?token_hash={{ .TokenHash }}&type=recovery
+-->
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Redefinir senha — FuelLink</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f6f8f8; -webkit-text-size-adjust:100%;">
+    <!-- preheader (oculto) -->
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+      Crie uma nova senha para sua conta FuelLink. O link expira em 1 hora.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f6f8f8;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <!-- card -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                 style="max-width:480px; width:100%; background-color:#ffffff; border:1px solid #e6eeee; border-radius:16px; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+            <!-- header -->
+            <tr>
+              <td style="background-color:#052a30; padding:24px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="vertical-align:middle;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="display:inline-table;">
+                        <tr>
+                          <td style="width:36px; height:36px; background-color:#0e8285; border-radius:9px; text-align:center; vertical-align:middle; color:#ffffff; font-size:18px; font-weight:700;">F</td>
+                          <td style="padding-left:10px; vertical-align:middle; color:#ffffff; font-size:18px; font-weight:700; letter-spacing:-0.2px;">FuelLink</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- body -->
+            <tr>
+              <td style="padding:36px 32px 8px 32px;">
+                <h1 style="margin:0 0 8px 0; font-size:22px; line-height:1.25; color:#0a2024; font-weight:700;">
+                  Redefinir sua senha
+                </h1>
+                <p style="margin:0 0 24px 0; font-size:15px; line-height:1.6; color:#5b6b6e;">
+                  Recebemos um pedido para criar uma nova senha da sua conta FuelLink.
+                  Clique no botão abaixo para continuar — leva menos de um minuto.
+                </p>
+
+                <!-- button -->
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0;">
+                  <tr>
+                    <td align="center" style="border-radius:12px; background-color:#0e8285;">
+                      <a href="{{ .SiteURL }}/auth/recuperar?token_hash={{ .TokenHash }}&type=recovery"
+                         style="display:inline-block; padding:14px 28px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:12px;">
+                        Redefinir senha
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0 0 6px 0; font-size:13px; line-height:1.6; color:#8a999b;">
+                  Ou copie e cole este endereço no navegador:
+                </p>
+                <p style="margin:0 0 24px 0; font-size:13px; line-height:1.6; word-break:break-all;">
+                  <a href="{{ .SiteURL }}/auth/recuperar?token_hash={{ .TokenHash }}&type=recovery"
+                     style="color:#0e8285; text-decoration:underline;">{{ .SiteURL }}/auth/recuperar?token_hash={{ .TokenHash }}&type=recovery</a>
+                </p>
+
+                <!-- aviso -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                       style="background-color:#fff8ed; border:1px solid #ffefd1; border-radius:12px;">
+                  <tr>
+                    <td style="padding:12px 16px; font-size:13px; line-height:1.6; color:#94370f;">
+                      Este link expira em <strong>1 hora</strong> e só pode ser usado uma vez.
+                      Se você não pediu para redefinir a senha, ignore este e-mail — sua senha continua a mesma.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- footer -->
+            <tr>
+              <td style="padding:24px 32px 28px 32px; border-top:1px solid #eef3f3;">
+                <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa7a9;">
+                  FuelLink — parcerias e abastecimento de frotas.<br />
+                  Você recebeu este e-mail porque alguém solicitou a recuperação de senha para esta conta.
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <p style="max-width:480px; margin:16px auto 0 auto; font-size:11px; color:#aab6b8; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            © FuelLink. Todos os direitos reservados.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

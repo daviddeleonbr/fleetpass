@@ -7,9 +7,16 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useNotificacoes } from '@/hooks/use-notificacoes'
+import { usePerfilAtual } from '@/hooks/use-perfil-atual'
 
 interface TopbarProps {
   breadcrumb?: { label: string; href?: string }[]
+}
+
+// Rotas do menu do avatar por papel (apenas as que existem hoje)
+const MENU_ROTAS: Record<string, { perfil?: string; config?: string }> = {
+  posto: { perfil: '/posto/perfil', config: '/posto/configuracoes' },
+  admin: { config: '/admin/configuracoes' },
 }
 
 function tempoRelativo(iso: string): string {
@@ -29,6 +36,10 @@ export function Topbar({ breadcrumb = [] }: TopbarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const { items, naoLidas, marcarLida, marcarTodasLidas } = useNotificacoes()
+  const { perfil } = usePerfilAtual()
+  const nome = perfil?.nome ?? '…'
+  const iniciais = perfil?.iniciais ?? '·'
+  const rotas = MENU_ROTAS[perfil?.role ?? ''] ?? {}
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -125,10 +136,10 @@ export function Topbar({ breadcrumb = [] }: TopbarProps) {
             onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false) }}
             className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-              J
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium uppercase">
+              {iniciais}
             </div>
-            <span className="text-sm font-medium text-gray-700">João</span>
+            <span className="text-sm font-medium text-gray-700">{nome}</span>
             <ChevronDown size={14} className="text-gray-400" />
           </button>
 
@@ -136,12 +147,16 @@ export function Topbar({ breadcrumb = [] }: TopbarProps) {
             <>
               <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
               <div className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-20 py-1">
-                <Link href="/empresa/perfil" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
-                  <User size={15} /> Perfil
-                </Link>
-                <Link href="/empresa/configuracoes" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
-                  <Settings size={15} /> Configurações
-                </Link>
+                {rotas.perfil && (
+                  <Link href={rotas.perfil} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <User size={15} /> Perfil
+                  </Link>
+                )}
+                {rotas.config && (
+                  <Link href={rotas.config} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <Settings size={15} /> Configurações
+                  </Link>
+                )}
                 <div className="border-t border-gray-100 mt-1 pt-1">
                   <button onClick={handleLogout} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 w-full">
                     <LogOut size={15} /> Sair

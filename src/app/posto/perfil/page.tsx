@@ -1,49 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   User, Mail, Phone, MapPin, Shield, Store, Pencil, Check,
   X, Camera, Clock, FileText, Handshake, Receipt, Star,
-  LogOut, AlertCircle, ChevronRight, Building2, Calendar,
+  LogOut, AlertCircle, ChevronRight, Building2, Calendar, Loader2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-// ─── Mock ──────────────────────────────────────────────────────────────────────
-
-const PERFIL = {
-  nome: 'Maria Andrade',
-  email: 'maria@shellcentro.com.br',
-  telefone: '(11) 99876-5432',
-  cpf: '•••.456.789-••',
-  cargo: 'Administradora',
-  departamento: 'Operações',
-  cidade: 'São Paulo, SP',
-  membroDesde: 'Janeiro de 2025',
-  ultimoAcesso: 'Hoje às 09:14',
-  plano: 'Pro',
+interface PerfilData {
+  perfil: { nome: string; email: string; telefone: string; cargo: string; plano: string; membroDesde: string; cidade: string }
+  postos: { nome: string; cnpj: string; parceiros: number; status: string }[]
+  stats: { postos: number; parceiros: number; requisicoesMes: number; faturas: number }
+  atividade: { acao: string; detalhe: string; quando: string }[]
 }
-
-const POSTOS = [
-  { nome: 'Shell — Centro', cnpj: '11.222.333/0001-44', role: 'Administradora', parceiros: 3, status: 'ativo'   as const },
-  { nome: 'Shell — Norte',  cnpj: '55.666.777/0001-88', role: 'Administradora', parceiros: 2, status: 'ativo'   as const },
-]
-
-const STATS = [
-  { label: 'Postos gerenciados',    value: '2',          icon: Store,       color: 'text-blue-600',   bg: 'bg-blue-50'   },
-  { label: 'Parceiros ativos',      value: '5',          icon: Handshake,   color: 'text-indigo-600', bg: 'bg-indigo-50' },
-  { label: 'Requisições este mês',  value: '47',         icon: FileText,    color: 'text-violet-600', bg: 'bg-violet-50' },
-  { label: 'Faturas emitidas',      value: '12',         icon: Receipt,     color: 'text-emerald-600',bg: 'bg-emerald-50'},
-]
-
-const ATIVIDADE = [
-  { acao: 'Fatura de Fevereiro/2025 fechada',              detalhe: 'TransLog Transportes · R$ 14.800,00',  quando: 'Hoje, 08:52',       icon: Receipt,   cor: 'text-gray-500'    },
-  { acao: 'Parceiro desbloqueado com crédito adicional',   detalhe: 'TransLog Transportes · +R$ 2.000,00',  quando: 'Ontem, 14:30',      icon: Handshake, cor: 'text-indigo-500'  },
-  { acao: 'Frentista inativado',                           detalhe: 'José Almeida · Shell — Centro',        quando: 'Ontem, 11:05',      icon: User,      cor: 'text-orange-400'  },
-  { acao: 'Novo parceiro aprovado',                        detalhe: 'LogBR Express',                        quando: '01/03/2025, 10:18', icon: Handshake, cor: 'text-emerald-500' },
-  { acao: 'Veículo DEF-5678 bloqueado',                    detalhe: 'TransLog Transportes',                 quando: '12/03/2025, 11:20', icon: AlertCircle,cor: 'text-red-400'    },
-  { acao: 'Configurações de notificação atualizadas',      detalhe: 'E-mail e WhatsApp',                    quando: '08/03/2025, 09:00', icon: Shield,    cor: 'text-blue-400'    },
-]
 
 // ─── Campos editáveis ─────────────────────────────────────────────────────────
 
@@ -103,6 +74,43 @@ function CampoEditavel({ label, value, editavel = true, icon: Icon, tipo = 'text
 
 export default function PerfilPage() {
   const [fotoHover, setFotoHover] = useState(false)
+  const [data, setData] = useState<PerfilData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/posto/perfil')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then(setData)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Erro ao carregar.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-gray-400">
+        <Loader2 size={22} className="animate-spin" /> <span className="text-sm">Carregando perfil…</span>
+      </div>
+    )
+  }
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-red-500">
+        <AlertCircle size={16} /> {error || 'Erro ao carregar.'}
+      </div>
+    )
+  }
+
+  const PERFIL = { ...data.perfil, cpf: '—', departamento: '—', ultimoAcesso: '—' }
+  const POSTOS = data.postos.map((p) => ({ ...p, role: data.perfil.cargo }))
+  const STATS = [
+    { label: 'Postos gerenciados',   value: String(data.stats.postos),         icon: Store,     color: 'text-blue-600',    bg: 'bg-blue-50' },
+    { label: 'Parceiros ativos',     value: String(data.stats.parceiros),      icon: Handshake, color: 'text-indigo-600',  bg: 'bg-indigo-50' },
+    { label: 'Requisições este mês', value: String(data.stats.requisicoesMes), icon: FileText,  color: 'text-violet-600',  bg: 'bg-violet-50' },
+    { label: 'Faturas emitidas',     value: String(data.stats.faturas),        icon: Receipt,   color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  ]
+  const ATIVIDADE = data.atividade.map((a) => ({ ...a, icon: Receipt, cor: 'text-gray-500' }))
+  const iniciais = (PERFIL.nome || '—').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -120,7 +128,7 @@ export default function PerfilPage() {
               onMouseLeave={() => setFotoHover(false)}
             >
               <div className="w-full h-full bg-blue-600 rounded-xl flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">MA</span>
+                <span className="text-2xl font-bold text-white">{iniciais}</span>
               </div>
               {fotoHover && (
                 <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">

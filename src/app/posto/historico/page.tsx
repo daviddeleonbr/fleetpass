@@ -1,33 +1,22 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Download, Store, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Download, Store, X, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
-const POSTOS       = ['Shell — Centro', 'Shell — Norte']
-const EMPRESAS     = ['TransLog Transportes', 'LogBR Express', 'Construtora Alpha', 'Turbo Fretes', 'TransRota Logística']
-const COMBUSTIVEIS = ['Diesel S-10', 'Gasolina Comum', 'Etanol', 'Diesel Comum']
-const POR_PAGINA   = 5
+const POR_PAGINA = 5
 
-const historico = [
-  { posto: 'Shell — Centro', data: '10/03/2025', empresa: 'TransLog Transportes', veiculo: 'ABC-1234', motorista: 'Roberto Lima',   combustivel: 'Diesel S-10',    litros: '45 L',  valor: 'R$ 287,50' },
-  { posto: 'Shell — Norte',  data: '10/03/2025', empresa: 'LogBR Express',        veiculo: 'LBR-9999', motorista: 'Sandro Mota',     combustivel: 'Diesel S-10',    litros: '60 L',  valor: 'R$ 384,00' },
-  { posto: 'Shell — Centro', data: '09/03/2025', empresa: 'Construtora Alpha',    veiculo: 'CAL-5678', motorista: 'Pedro Gomes',     combustivel: 'Gasolina Comum', litros: '35 L',  valor: 'R$ 195,00' },
-  { posto: 'Shell — Centro', data: '09/03/2025', empresa: 'TransLog Transportes', veiculo: 'GHI-9012', motorista: 'Carlos Santos',   combustivel: 'Gasolina Comum', litros: '30 L',  valor: 'R$ 167,40' },
-  { posto: 'Shell — Norte',  data: '08/03/2025', empresa: 'Turbo Fretes',         veiculo: 'TFR-3456', motorista: 'Raimundo Neto',   combustivel: 'Etanol',         litros: '40 L',  valor: 'R$ 140,00' },
-  { posto: 'Shell — Norte',  data: '08/03/2025', empresa: 'LogBR Express',        veiculo: 'LBR-7777', motorista: 'Ana Fernandes',   combustivel: 'Diesel S-10',    litros: '80 L',  valor: 'R$ 512,00' },
-  { posto: 'Shell — Centro', data: '07/03/2025', empresa: 'TransRota Logística',  veiculo: 'TRL-2345', motorista: 'João Batista',    combustivel: 'Diesel S-10',    litros: '55 L',  valor: 'R$ 352,00' },
-  { posto: 'Shell — Norte',  data: '07/03/2025', empresa: 'Construtora Alpha',    veiculo: 'CAL-6789', motorista: 'Marcos Lima',     combustivel: 'Diesel Comum',   litros: '50 L',  valor: 'R$ 290,00' },
-  { posto: 'Shell — Centro', data: '06/03/2025', empresa: 'TransLog Transportes', veiculo: 'DEF-5678', motorista: 'Ana Costa',       combustivel: 'Diesel S-10',    litros: '65 L',  valor: 'R$ 416,00' },
-  { posto: 'Shell — Norte',  data: '06/03/2025', empresa: 'Turbo Fretes',         veiculo: 'TFR-8901', motorista: 'Claudia Sousa',   combustivel: 'Gasolina Comum', litros: '25 L',  valor: 'R$ 139,25' },
-]
+type Abastecimento = {
+  posto: string; data: string; empresa: string; veiculo: string
+  motorista: string; combustivel: string; litros: string; valor: string
+}
 
 function parseBRL(v: string) {
   return parseFloat(v.replace('R$ ', '').replace('.', '').replace(',', '.')) || 0
 }
 
-function exportarCSV(dados: typeof historico) {
+function exportarCSV(dados: Abastecimento[]) {
   const cabecalho = ['Data', 'Posto', 'Empresa', 'Veículo', 'Motorista', 'Combustível', 'Litros', 'Valor']
   const linhas = dados.map((h) => [h.data, h.posto, h.empresa, h.veiculo, h.motorista, h.combustivel, h.litros, h.valor])
   const csv = [cabecalho, ...linhas].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')
@@ -41,22 +30,41 @@ function exportarCSV(dados: typeof historico) {
 }
 
 export default function HistoricoPostoPage() {
-  const [mes, setMes]                         = useState('Março 2025')
   const [filtroPosto, setFiltroPosto]         = useState('')
   const [filtroEmpresa, setFiltroEmpresa]     = useState('')
   const [filtroComb, setFiltroComb]           = useState('')
   const [pagina, setPagina]                   = useState(1)
 
+  const [historico, setHistorico]   = useState<Abastecimento[]>([])
+  const [postosOpt, setPostosOpt]   = useState<string[]>([])
+  const [empresasOpt, setEmpresasOpt] = useState<string[]>([])
+  const [combOpt, setCombOpt]       = useState<string[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState('')
+
+  useEffect(() => {
+    fetch('/api/posto/historico')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then((d) => {
+        setHistorico(d.historico ?? [])
+        setPostosOpt(d.postos ?? [])
+        setEmpresasOpt(d.empresas ?? [])
+        setCombOpt(d.combustiveis ?? [])
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Erro ao carregar.'))
+      .finally(() => setLoading(false))
+  }, [])
+
   const filtrados = useMemo(() => {
-    setPagina(1)
     return historico.filter((h) => {
       const matchPosto   = !filtroPosto   || h.posto       === filtroPosto
       const matchEmpresa = !filtroEmpresa || h.empresa     === filtroEmpresa
       const matchComb    = !filtroComb    || h.combustivel === filtroComb
       return matchPosto && matchEmpresa && matchComb
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroPosto, filtroEmpresa, filtroComb])
+  }, [filtroPosto, filtroEmpresa, filtroComb, historico])
+
+  useEffect(() => { setPagina(1) }, [filtroPosto, filtroEmpresa, filtroComb])
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
   const paginaAtual  = Math.min(pagina, totalPaginas)
@@ -89,37 +97,27 @@ export default function HistoricoPostoPage() {
         <Card padding="md">
           <p className="text-sm text-gray-500">Receita B2B</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{formatBRL(receitaTotal)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{mes}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Total</p>
         </Card>
         <Card padding="md">
           <p className="text-sm text-gray-500">Abastecimentos</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{filtrados.length}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{mes}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Total</p>
         </Card>
         <Card padding="md">
           <p className="text-sm text-gray-500">Empresas atendidas</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{empresasSet.size}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{mes}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Total</p>
         </Card>
         <Card padding="md">
           <p className="text-sm text-gray-500">Volume total</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{litrosTotal} L</p>
-          <p className="text-xs text-gray-400 mt-0.5">{mes}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Total</p>
         </Card>
       </div>
 
       {/* Filtros */}
       <div className="flex gap-3 flex-wrap items-center">
-        <select
-          value={mes}
-          onChange={(e) => setMes(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500"
-        >
-          <option>Março 2025</option>
-          <option>Fevereiro 2025</option>
-          <option>Janeiro 2025</option>
-        </select>
-
         <div className="relative">
           <Store size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <select
@@ -128,7 +126,7 @@ export default function HistoricoPostoPage() {
             className="pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500 appearance-none cursor-pointer"
           >
             <option value="">Todos os postos</option>
-            {POSTOS.map((p) => <option key={p} value={p}>{p}</option>)}
+            {postosOpt.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
 
@@ -138,7 +136,7 @@ export default function HistoricoPostoPage() {
           className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500"
         >
           <option value="">Todas empresas</option>
-          {EMPRESAS.map((e) => <option key={e} value={e}>{e}</option>)}
+          {empresasOpt.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
 
         <select
@@ -147,7 +145,7 @@ export default function HistoricoPostoPage() {
           className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-500"
         >
           <option value="">Todos combustíveis</option>
-          {COMBUSTIVEIS.map((c) => <option key={c} value={c}>{c}</option>)}
+          {combOpt.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
 
         {temFiltroSecundario && (
@@ -166,16 +164,28 @@ export default function HistoricoPostoPage() {
 
       {/* Tabela */}
       <Card padding="none">
-        {filtrados.length === 0 ? (
+        {error ? (
+          <div className="flex items-center justify-center gap-2 py-14 text-sm text-red-500">
+            <AlertCircle size={16} /> {error}
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center gap-2 py-14 text-gray-400">
+            <Loader2 size={20} className="animate-spin" /> <span className="text-sm">Carregando histórico…</span>
+          </div>
+        ) : filtrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 gap-2">
             <Store size={24} className="text-gray-200" />
-            <p className="text-sm font-medium text-gray-400">Nenhum registro encontrado</p>
-            <button
-              onClick={() => { setFiltroPosto(''); setFiltroEmpresa(''); setFiltroComb('') }}
-              className="text-xs text-blue-500 hover:underline mt-1"
-            >
-              Limpar filtros
-            </button>
+            <p className="text-sm font-medium text-gray-400">
+              {historico.length === 0 ? 'Nenhum abastecimento registrado ainda.' : 'Nenhum registro encontrado'}
+            </p>
+            {historico.length > 0 && (
+              <button
+                onClick={() => { setFiltroPosto(''); setFiltroEmpresa(''); setFiltroComb('') }}
+                className="text-xs text-blue-500 hover:underline mt-1"
+              >
+                Limpar filtros
+              </button>
+            )}
           </div>
         ) : (
           <>

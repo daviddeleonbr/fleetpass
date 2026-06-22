@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import {
   Store, Plus, MapPin, Fuel, CheckCircle, ChevronRight,
   X, Pencil, Power, ArrowLeft, Star, TrendingUp, Users,
-  Zap, MessageSquare, ThumbsUp, Loader2, AlertCircle, CreditCard,
+  Zap, MessageSquare, ThumbsUp, Loader2, AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -44,8 +44,6 @@ interface Posto {
   status: StatusPosto
   lat?: number | null
   lng?: number | null
-  asaas_id: string | null
-  asaas_wallet_id: string | null
 }
 
 function StarFill({ filled }: { filled: boolean }) {
@@ -77,12 +75,6 @@ function PainelPosto({ posto, onBack }: { posto: Posto; onBack: () => void }) {
             <MapPin size={11} /> {posto.endereco}{posto.numero ? `, ${posto.numero}` : ''} · {posto.cidade}/{posto.estado}
           </p>
         </div>
-        {posto.asaas_id && (
-          <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg shrink-0">
-            <CheckCircle size={13} className="text-emerald-500" />
-            <span className="text-xs text-emerald-700 font-medium">Asaas</span>
-          </div>
-        )}
       </div>
       <div className="grid grid-cols-3 gap-4">
         <Card padding="md"><div className="flex items-center gap-2 mb-2"><TrendingUp size={14} className="text-emerald-500" /><p className="text-xs text-gray-500">Receita B2B — Mês atual</p></div><p className="text-2xl font-bold text-gray-900">—</p></Card>
@@ -107,174 +99,7 @@ function emptyForm() {
   }
 }
 
-function emptyAsaasForm() {
-  return { email: '', celular: '', tipoEmpresa: 'LIMITED', faturamento: '' }
-}
-
 const BRAZIL_CENTER: [number, number] = [-15.7801, -47.9292]
-
-// ── Asaas Modal ──────────────────────────────────────────────────────────────
-
-function AsaasModal({
-  posto,
-  onClose,
-  onSuccess,
-}: {
-  posto: Posto
-  onClose: () => void
-  onSuccess: (asaasId: string, walletId: string | null) => void
-}) {
-  const [form, setForm]         = useState(emptyAsaasForm())
-  const [saving, setSaving]     = useState(false)
-  const [erro, setErro]         = useState('')
-  const [emailEmUso, setEmailEmUso] = useState(false)
-  const [ok, setOk]             = useState(false)
-
-  const update = (f: string, v: string) => {
-    if (f === 'email') setEmailEmUso(false)
-    setForm(prev => ({ ...prev, [f]: v }))
-  }
-
-  const submit = async () => {
-    if (!form.email.trim())   { setErro('Informe o e-mail.'); return }
-    if (!form.celular.trim()) { setErro('Informe o celular.'); return }
-    if (!form.faturamento || Number(form.faturamento) <= 0) { setErro('Informe o faturamento mensal estimado.'); return }
-    setErro('')
-    setEmailEmUso(false)
-    setSaving(true)
-    try {
-      const res  = await fetch('/api/asaas/subconta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome:        posto.nome,
-          email:       form.email,
-          cpfCnpj:     posto.cnpj,
-          tipoEmpresa: form.tipoEmpresa,
-          celular:     form.celular,
-          cep:         posto.cep,
-          endereco:    posto.endereco,
-          numero:      posto.numero,
-          complemento: '',
-          bairro:      posto.bairro,
-          cidade:      posto.cidade,
-          estado:      posto.estado,
-          incomeValue: Number(form.faturamento),
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        // Detecta e-mail já cadastrado no Asaas
-        const detail     = data.detail ?? {}
-        const erros: { description?: string }[] = Array.isArray(detail?.errors) ? detail.errors : []
-        const isEmailUso = erros.some(e => e.description?.toLowerCase().includes('email') && e.description?.toLowerCase().includes('uso'))
-          || JSON.stringify(detail).toLowerCase().includes('email') && JSON.stringify(detail).toLowerCase().includes('uso')
-        if (isEmailUso) {
-          setEmailEmUso(true)
-          setErro('Este e-mail já está cadastrado no Asaas. Informe outro endereço de e-mail.')
-          return
-        }
-        const msg = typeof detail === 'string' ? detail : JSON.stringify(detail)
-        setErro((data.error ?? 'Erro ao criar carteira.') + (msg ? ` — ${msg}` : ''))
-        return
-      }
-      setOk(true)
-      onSuccess(data.id, data.walletId ?? null)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <>
-      <div className="fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <CreditCard size={17} className="text-blue-500" />
-              <span className="text-sm font-semibold text-gray-900">
-                {ok ? 'Carteira ativada!' : 'Ativar carteira'}
-              </span>
-            </div>
-            <button onClick={onClose} className="text-gray-300 hover:text-gray-500 transition-colors"><X size={18} /></button>
-          </div>
-
-          <div className="px-6 py-6">
-            {ok ? (
-              <div className="text-center space-y-4">
-                <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle size={28} className="text-emerald-500" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">Carteira criada!</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    <strong>{posto.nome}</strong> agora pode fechar faturas e acompanhar pagamentos.
-                  </p>
-                </div>
-                <Button className="w-full" onClick={onClose}>Fechar</Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Dados do posto (read-only) */}
-                <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 space-y-1.5">
-                  <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">Dados do posto</p>
-                  <p className="text-sm font-semibold text-gray-800">{posto.nome}</p>
-                  <p className="text-xs text-gray-500 font-mono">{posto.cnpj}</p>
-                  <p className="text-xs text-gray-500">{posto.endereco}{posto.numero ? `, ${posto.numero}` : ''} — {posto.bairro}, {posto.cidade}/{posto.estado}</p>
-                </div>
-
-                {/* E-mail */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">E-mail do posto</label>
-                  <input
-                    type="email"
-                    placeholder="contato@posto.com.br"
-                    value={form.email}
-                    onChange={e => update('email', e.target.value)}
-                    className={cn(
-                      'w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2',
-                      emailEmUso
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-100 bg-red-50'
-                        : 'border-gray-200 focus:border-blue-500 focus:ring-blue-50'
-                    )}
-                  />
-                  {emailEmUso && (
-                    <div className="mt-2 flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-                      <AlertCircle size={13} className="shrink-0 mt-0.5" />
-                      <span>Este e-mail já está cadastrado no Asaas. Por favor, informe outro endereço de e-mail para este posto.</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Input label="Celular / Telefone" placeholder="(11) 99999-9999" value={form.celular} onChange={e => update('celular', e.target.value)} />
-                  <Input label="Faturamento mensal (R$)" type="number" placeholder="50000" value={form.faturamento} onChange={e => update('faturamento', e.target.value)} helperText="Receita bruta estimada" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de empresa</label>
-                  <select className="w-full px-3 py-2.5 text-sm text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50" value={form.tipoEmpresa} onChange={e => update('tipoEmpresa', e.target.value)}>
-                    <option value="LIMITED">Ltda / S.A.</option>
-                    <option value="MEI">MEI</option>
-                    <option value="INDIVIDUAL">Empresário Individual</option>
-                    <option value="ASSOCIATION">Associação</option>
-                  </select>
-                </div>
-                {erro && !emailEmUso && (
-                  <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{erro}</div>
-                )}
-                <div className="flex gap-3 pt-1">
-                  <Button variant="secondary" className="flex-1" onClick={onClose}>Cancelar</Button>
-                  <Button className="flex-1" onClick={submit} disabled={saving} isLoading={saving}>Ativar carteira</Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -290,9 +115,6 @@ export default function MeusPostosPage() {
   const [form, setForm]             = useState(emptyForm())
   const [savingPosto, setSavingPosto] = useState(false)
   const [formErro, setFormErro]     = useState('')
-
-  // Modal Asaas
-  const [asaasPosto, setAsaasPosto] = useState<Posto | null>(null)
 
   const [painelPosto, setPainelPosto] = useState<Posto | null>(null)
 
@@ -452,10 +274,6 @@ export default function MeusPostosPage() {
                         <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full border', p.status === 'ativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200')}>
                           {p.status === 'ativo' ? 'Ativo' : 'Inativo'}
                         </span>
-                        {p.asaas_id
-                          ? <span className="text-[11px] font-medium px-2 py-0.5 rounded-full border bg-blue-50 text-blue-600 border-blue-200">Asaas</span>
-                          : <span className="text-[11px] font-medium px-2 py-0.5 rounded-full border bg-amber-50 text-amber-600 border-amber-200">Sem faturamento</span>
-                        }
                       </div>
                       <p className="text-xs font-mono text-gray-400 mb-3">{p.cnpj}</p>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
@@ -470,14 +288,6 @@ export default function MeusPostosPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {!p.asaas_id && (
-                        <button
-                          onClick={() => setAsaasPosto(p)}
-                          className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200 hover:border-blue-400 transition-colors"
-                        >
-                          <CreditCard size={12} /> Ativar carteira
-                        </button>
-                      )}
                       <button onClick={() => toggleStatus(p.id)} className={cn('flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors', p.status === 'ativo' ? 'text-gray-400 hover:text-red-500 border-gray-200 hover:border-red-200' : 'text-emerald-600 hover:text-emerald-700 border-emerald-200 hover:border-emerald-400')}>
                         <Power size={12} />{p.status === 'ativo' ? 'Desativar' : 'Ativar'}
                       </button>
@@ -637,24 +447,6 @@ export default function MeusPostosPage() {
                       </p>
                     </div>
 
-                    {/* CTA Asaas opcional */}
-                    <div className="text-left bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
-                      <p className="text-xs font-semibold text-amber-800">Faturamento automático (opcional)</p>
-                      <p className="text-xs text-amber-700 leading-relaxed">
-                        Ative a carteira digital para receber pagamentos de faturas e transferir para sua conta bancária.
-                      </p>
-                      <button
-                        onClick={() => {
-                          closeModal()
-                          const novoP = postos[postos.length - 1]
-                          if (novoP) setAsaasPosto(novoP)
-                        }}
-                        className="flex items-center gap-1.5 text-xs font-medium text-amber-800 hover:text-amber-900 underline underline-offset-2 transition-colors"
-                      >
-                        <CreditCard size={12} /> Ativar carteira agora
-                      </button>
-                    </div>
-
                     <div className="space-y-2 pt-1">
                       <Button className="w-full" onClick={openModal}><Plus size={14} /> Adicionar outro posto</Button>
                       <button onClick={closeModal} className="w-full py-2.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">Fechar</button>
@@ -665,17 +457,6 @@ export default function MeusPostosPage() {
             </div>
           </div>
         </>
-      )}
-
-      {/* Modal Asaas */}
-      {asaasPosto && (
-        <AsaasModal
-          posto={asaasPosto}
-          onClose={() => setAsaasPosto(null)}
-          onSuccess={(asaasId, walletId) => {
-            setPostos(prev => prev.map(p => p.id === asaasPosto.id ? { ...p, asaas_id: asaasId, asaas_wallet_id: walletId } : p))
-          }}
-        />
       )}
     </div>
   )

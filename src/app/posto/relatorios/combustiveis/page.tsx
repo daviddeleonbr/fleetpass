@@ -5,7 +5,8 @@ import { FileDown, Sheet, Droplets } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { ABASTECIMENTOS, POSTOS, agruparPorCombustivel, filtrarPorIntervalo, filtrarPorPosto, labelPeriodo, formatBRL } from '@/lib/relatorios-data'
+import { agruparPorCombustivel, filtrarPorIntervalo, filtrarPorPosto, labelPeriodo, formatBRL } from '@/lib/relatorios-data'
+import { useAbastecimentos } from '@/hooks/use-abastecimentos'
 import { exportarPDF, exportarExcel } from '@/lib/export'
 
 const CORES: Record<string, string> = {
@@ -29,6 +30,7 @@ export default function RelatorioCombustiveisPage() {
   const [posto, setPosto] = useState('todos')
   const [loadingPDF, setLoadingPDF] = useState(false)
   const [loadingXLS, setLoadingXLS] = useState(false)
+  const { abastecimentos: ABASTECIMENTOS, postos: POSTOS } = useAbastecimentos()
 
   const filtrados = filtrarPorPosto(filtrarPorIntervalo(ABASTECIMENTOS, range.inicio, range.fim), posto)
   const dados = agruparPorCombustivel(filtrados)

@@ -1,61 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   User, Store, CreditCard, Bell, Shield, ChevronRight,
-  Check, AlertCircle, Mail, Phone,
-  Pencil, CheckCircle2, Zap, Crown,
+  AlertCircle, Mail, Phone,
+  Pencil, CheckCircle2, Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-// ─── Planos ───────────────────────────────────────────────────────────────────
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
-const PLANOS = [
-  {
-    id: 'starter',
-    nome: 'Starter',
-    preco: 149,
-    descricao: 'Para postos com até 3 empresas parceiras.',
-    recursos: ['Até 3 empresas parceiras', 'Até 2 frentistas', 'Relatórios básicos', 'Suporte por e-mail'],
-    destaque: false,
-  },
-  {
-    id: 'pro',
-    nome: 'Pro',
-    preco: 349,
-    descricao: 'Para postos em crescimento com múltiplas parcerias.',
-    recursos: ['Parceiros ilimitados', 'Frentistas ilimitados', 'Relatórios completos + exportação', 'Linha do tempo de clientes', 'Suporte prioritário via WhatsApp', 'Notificações de crédito'],
-    destaque: true,
-  },
-  {
-    id: 'enterprise',
-    nome: 'Enterprise',
-    preco: 749,
-    descricao: 'Para redes com múltiplos postos.',
-    recursos: ['Tudo do Pro', 'Múltiplos postos sob uma conta', 'Painel consolidado por rede', 'Integração com ERP (API)', 'Gerente de conta dedicado', 'SLA de suporte 4h'],
-    destaque: false,
-  },
-]
-
-const PLANO_ATUAL = 'pro'
-
-// ─── Mock dados da conta ──────────────────────────────────────────────────────
-
-const CONTA = {
-  nome: 'Maria Andrade',
-  email: 'maria@shellcentro.com.br',
-  telefone: '(11) 99876-5432',
-  cargo: 'Administradora',
-  postos: ['Shell — Centro', 'Shell — Norte'],
+interface ContaData {
+  nome: string; email: string; telefone: string; cargo: string; plano: string; postos: string[]
+}
+interface NotifPrefs {
+  emailBloqueio: boolean; emailFatura: boolean; emailCredito: boolean
+  whatsappBloqueio: boolean; whatsappFatura: boolean; whatsappCredito: boolean
+}
+interface Assinatura {
+  plano: string; status: string; statusLabel: string
+  quantidade: number; valorUnitario: number; valorTotal: number
+  intervalo: string; moeda: string
+  proximaCobranca: { data: string; valor: number } | null
+  cancelaEm: string | null
+}
+interface FaturaAssinatura {
+  id: string; numero: string; data: string; periodo: string
+  valor: number; status: string; statusLabel: string; url: string | null
+}
+interface AssinaturaData {
+  configurado: boolean; assinatura: Assinatura | null; faturas: FaturaAssinatura[]
 }
 
-const FATURA_MOCK = [
-  { ref: 'Fevereiro/2025', vencimento: '10/03/2025', valor: 349, status: 'pago'     as const },
-  { ref: 'Janeiro/2025',   vencimento: '10/02/2025', valor: 349, status: 'pago'     as const },
-  { ref: 'Dezembro/2024',  vencimento: '10/01/2025', valor: 299, status: 'pago'     as const },
-]
-
-const PROXIMA_COBRANCA = { data: '10/04/2025', valor: 349, plano: 'Pro' }
+const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 // ─── Seções ───────────────────────────────────────────────────────────────────
 
@@ -90,7 +67,10 @@ function Campo({ label, value, onEdit }: { label: string; value: string; onEdit?
 
 export default function ConfiguracoesPage() {
   const [secao, setSecao] = useState<Secao>('conta')
-  const [notif, setNotif] = useState({
+  const [conta, setConta] = useState<ContaData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState('')
+  const [notif, setNotif] = useState<NotifPrefs>({
     emailBloqueio: true,
     emailFatura: true,
     emailCredito: true,
@@ -100,14 +80,63 @@ export default function ConfiguracoesPage() {
   })
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
+  const [assin, setAssin] = useState<AssinaturaData | null>(null)
+  const [loadingAssin, setLoadingAssin] = useState(true)
+  const [erroAssin, setErroAssin] = useState('')
+
+  useEffect(() => {
+    fetch('/api/posto/configuracoes')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then((d) => { setConta(d.conta); if (d.notificacoes) setNotif(d.notificacoes) })
+      .catch((e) => setErro(e instanceof Error ? e.message : 'Erro ao carregar.'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/posto/assinatura')
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
+      .then((d) => setAssin(d))
+      .catch((e) => setErroAssin(e instanceof Error ? e.message : 'Erro ao carregar assinatura.'))
+      .finally(() => setLoadingAssin(false))
+  }, [])
 
   const salvar = async () => {
     setSalvando(true)
-    await new Promise(r => setTimeout(r, 800))
-    setSalvando(false)
-    setSalvo(true)
-    setTimeout(() => setSalvo(false), 2500)
+    try {
+      const res = await fetch('/api/posto/configuracoes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificacoes: notif }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? 'Erro ao salvar.')
+      setSalvo(true)
+      setTimeout(() => setSalvo(false), 2500)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao salvar.')
+      setTimeout(() => setErro(''), 4000)
+    } finally {
+      setSalvando(false)
+    }
   }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-gray-400">
+        <Loader2 size={22} className="animate-spin" /> <span className="text-sm">Carregando configurações…</span>
+      </div>
+    )
+  }
+  if (!conta) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-red-500">
+        <AlertCircle size={16} /> {erro || 'Erro ao carregar.'}
+      </div>
+    )
+  }
+
+  const CONTA = conta
+  const iniciais = (CONTA.nome || '—').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <div className="space-y-6">
@@ -151,7 +180,7 @@ export default function ConfiguracoesPage() {
                 <h2 className="text-base font-semibold text-gray-900 mb-4">Minha conta</h2>
                 <div className="flex items-center gap-4 mb-6 pb-5 border-b border-gray-50">
                   <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-white">MA</span>
+                    <span className="text-lg font-bold text-white">{iniciais}</span>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{CONTA.nome}</p>
@@ -182,82 +211,114 @@ export default function ConfiguracoesPage() {
             <>
               <div>
                 <h2 className="text-base font-semibold text-gray-900 mb-1">Plano e cobrança</h2>
-                <p className="text-sm text-gray-400 mb-5">Gerencie sua assinatura e visualize o histórico de faturas.</p>
+                <p className="text-sm text-gray-400 mb-5">Sua assinatura FuelLink e o histórico de faturas.</p>
 
-                {/* Próxima cobrança */}
-                <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-5">
-                  <CreditCard size={16} className="text-blue-500 shrink-0" />
-                  <p className="text-sm text-blue-700">
-                    Próxima cobrança: <strong>R$ {PROXIMA_COBRANCA.valor},00</strong> em <strong>{PROXIMA_COBRANCA.data}</strong> — Plano {PROXIMA_COBRANCA.plano}
-                  </p>
-                </div>
-
-                {/* Planos */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  {PLANOS.map(p => {
-                    const atual = p.id === PLANO_ATUAL
-                    return (
-                      <div key={p.id} className={`relative border rounded-xl p-4 ${atual ? 'border-blue-400 bg-blue-50' : p.destaque ? 'border-blue-200 bg-white' : 'border-gray-100 bg-white'}`}>
-                        {atual && (
-                          <span className="absolute -top-2.5 left-4 text-[10px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full">PLANO ATUAL</span>
-                        )}
-                        {p.destaque && !atual && (
-                          <span className="absolute -top-2.5 left-4 text-[10px] font-bold bg-amber-400 text-white px-2 py-0.5 rounded-full flex items-center gap-1"><Crown size={8} /> RECOMENDADO</span>
-                        )}
-                        <p className="text-sm font-bold text-gray-900 mt-1">{p.nome}</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">R$ {p.preco}<span className="text-xs font-normal text-gray-400">/mês</span></p>
-                        <p className="text-xs text-gray-400 mt-1 mb-3">{p.descricao}</p>
-                        <ul className="space-y-1.5 mb-4">
-                          {p.recursos.map(r => (
-                            <li key={r} className="flex items-start gap-1.5 text-xs text-gray-600">
-                              <Check size={11} className="text-emerald-500 shrink-0 mt-0.5" /> {r}
-                            </li>
-                          ))}
-                        </ul>
-                        {!atual && (
-                          <Button variant={p.destaque ? 'primary' : 'secondary'} size="sm" className="w-full">
-                            {p.id === 'starter' ? 'Fazer downgrade' : <><Zap size={12} /> Fazer upgrade</>}
-                          </Button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Histórico de faturas */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Histórico de faturas</p>
-                  <div className="border border-gray-100 rounded-xl overflow-hidden">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50">
-                          <th className="px-4 py-2.5 text-left">Referência</th>
-                          <th className="px-4 py-2.5 text-left">Vencimento</th>
-                          <th className="px-4 py-2.5 text-right">Valor</th>
-                          <th className="px-4 py-2.5 text-center">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {FATURA_MOCK.map(f => (
-                          <tr key={f.ref} className="hover:bg-gray-50/50">
-                            <td className="px-4 py-3 text-sm text-gray-700">{f.ref}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{f.vencimento}</td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">R$ {f.valor},00</td>
-                            <td className="px-4 py-3 text-center">
-                              <span className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-                                <CheckCircle2 size={10} /> Pago
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {loadingAssin ? (
+                  <div className="flex items-center justify-center gap-2 py-12 text-gray-400">
+                    <Loader2 size={18} className="animate-spin" /> <span className="text-sm">Carregando assinatura…</span>
                   </div>
-                </div>
+                ) : erroAssin ? (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                    <AlertCircle size={14} /> {erroAssin}
+                  </div>
+                ) : !assin?.configurado ? (
+                  <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                    <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-700">A cobrança via Stripe ainda não está configurada neste ambiente.</p>
+                  </div>
+                ) : !assin.assinatura ? (
+                  <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                    <CreditCard size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-700">Nenhuma assinatura ativa encontrada para esta conta.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Card da assinatura */}
+                    <div className="border border-blue-200 bg-blue-50 rounded-xl p-5 mb-5">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-lg font-bold text-gray-900">{assin.assinatura.plano}</p>
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                              assin.assinatura.status === 'active' || assin.assinatura.status === 'trialing'
+                                ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {assin.assinatura.statusLabel}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {assin.assinatura.quantidade} {assin.assinatura.quantidade === 1 ? 'CNPJ' : 'CNPJs'} × {brl(assin.assinatura.valorUnitario)} / {assin.assinatura.intervalo}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-gray-900">{brl(assin.assinatura.valorTotal)}</p>
+                          <p className="text-xs text-gray-400">por {assin.assinatura.intervalo}</p>
+                        </div>
+                      </div>
+
+                      {assin.assinatura.proximaCobranca && (
+                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-blue-100 text-sm text-blue-700">
+                          <CreditCard size={14} className="shrink-0" />
+                          <span>Próxima cobrança: <strong>{brl(assin.assinatura.proximaCobranca.valor)}</strong> em <strong>{assin.assinatura.proximaCobranca.data}</strong></span>
+                        </div>
+                      )}
+                      {assin.assinatura.cancelaEm && (
+                        <div className="flex items-center gap-2 mt-2 text-sm text-amber-700">
+                          <AlertCircle size={14} className="shrink-0" />
+                          <span>Assinatura será cancelada em <strong>{assin.assinatura.cancelaEm}</strong>.</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Histórico de faturas */}
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-3">Histórico de faturas</p>
+                      {assin.faturas.length === 0 ? (
+                        <p className="text-sm text-gray-400 py-6 text-center border border-gray-100 rounded-xl">Nenhuma fatura emitida ainda.</p>
+                      ) : (
+                        <div className="border border-gray-100 rounded-xl overflow-hidden">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50">
+                                <th className="px-4 py-2.5 text-left">Fatura</th>
+                                <th className="px-4 py-2.5 text-left">Data</th>
+                                <th className="px-4 py-2.5 text-right">Valor</th>
+                                <th className="px-4 py-2.5 text-center">Status</th>
+                                <th className="px-4 py-2.5 text-right"></th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                              {assin.faturas.map(f => (
+                                <tr key={f.id} className="hover:bg-gray-50/50">
+                                  <td className="px-4 py-3 text-sm text-gray-700">{f.numero}</td>
+                                  <td className="px-4 py-3 text-sm text-gray-500">{f.data}</td>
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">{brl(f.valor)}</td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                                      f.status === 'paid' ? 'bg-emerald-50 text-emerald-700'
+                                        : f.status === 'open' ? 'bg-amber-50 text-amber-700'
+                                        : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                      {f.status === 'paid' && <CheckCircle2 size={10} />} {f.statusLabel}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    {f.url && <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">Ver</a>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <div className="mt-4 pt-4 border-t border-gray-50">
                   <p className="text-xs text-gray-400">
-                    Para cancelar a assinatura ou solicitar nota fiscal, entre em contato com{' '}
+                    A cobrança é por CNPJ ativo — cada posto adicionado entra automaticamente na assinatura.
+                    Para cancelar ou emitir nota fiscal, fale com{' '}
                     <a href="mailto:financeiro@fuellink.com.br" className="text-blue-500 hover:underline">financeiro@fuellink.com.br</a>.
                   </p>
                 </div>
@@ -295,10 +356,11 @@ export default function ConfiguracoesPage() {
                   </div>
                 ))}
 
-                <div className="pt-4">
+                <div className="pt-4 flex items-center gap-3">
                   <Button onClick={salvar} isLoading={salvando} size="sm">
                     {salvo ? <><CheckCircle2 size={13} /> Salvo!</> : 'Salvar preferências'}
                   </Button>
+                  {erro && <span className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12} /> {erro}</span>}
                 </div>
               </div>
             </>

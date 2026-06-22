@@ -16,7 +16,6 @@ function useBreadcrumb() {
     postos: 'Postos',
     empresas: 'Empresas',
     transacoes: 'Transações',
-subcontas: 'Subcontas Asaas',
     notas: 'Notas Fiscais',
     configuracoes: 'Configurações',
     planos: 'Planos Stripe',

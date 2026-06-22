@@ -6,7 +6,8 @@ import { FileDown, Sheet, Building2, ChevronRight, AlertCircle } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { ABASTECIMENTOS, POSTOS, agruparPorEmpresa, filtrarPorIntervalo, filtrarPorPosto, empresaSlug, labelPeriodo, formatBRL } from '@/lib/relatorios-data'
+import { agruparPorEmpresa, filtrarPorIntervalo, filtrarPorPosto, empresaSlug, labelPeriodo, formatBRL } from '@/lib/relatorios-data'
+import { useAbastecimentos } from '@/hooks/use-abastecimentos'
 import { exportarPDF, exportarExcel } from '@/lib/export'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +24,7 @@ export default function RelatorioEmpresasPage() {
   const [posto, setPosto] = useState('todos')
   const [loadingPDF, setLoadingPDF] = useState(false)
   const [loadingXLS, setLoadingXLS] = useState(false)
+  const { abastecimentos: ABASTECIMENTOS, postos: POSTOS } = useAbastecimentos()
 
   const filtrados = filtrarPorPosto(filtrarPorIntervalo(ABASTECIMENTOS, range.inicio, range.fim), posto)
   const dados = agruparPorEmpresa(filtrados)
