@@ -1,9 +1,15 @@
 import Link from 'next/link'
-import { Building2, Fuel, ArrowRight } from 'lucide-react'
+import { Building2, Fuel, ArrowRight, ArrowLeft } from 'lucide-react'
 
 export default function CadastroPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+    <div className="relative min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+      <Link
+        href="/"
+        className="absolute top-5 left-5 z-20 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft size={16} /> Voltar ao início
+      </Link>
       <Link href="/" className="flex items-center gap-2 mb-10">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
           <Fuel size={16} className="text-white" />

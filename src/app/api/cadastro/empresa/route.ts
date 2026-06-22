@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
+import { isCpfCnpjValid, maskCpfCnpj } from '@/lib/documento'
 
 export async function POST(req: NextRequest) {
   let body: Record<string, string>
@@ -20,6 +21,10 @@ export async function POST(req: NextRequest) {
 
   if (senha.length < 6) {
     return NextResponse.json({ error: 'A senha deve ter no mínimo 6 caracteres.' }, { status: 400 })
+  }
+
+  if (!isCpfCnpjValid(cnpj)) {
+    return NextResponse.json({ error: 'CNPJ/CPF inválido.' }, { status: 400 })
   }
 
   const supabase = createServiceClient()
@@ -47,9 +52,8 @@ export async function POST(req: NextRequest) {
 
   const userId = authData.user.id
 
-  // 2. Cria registro na tabela empresas
-  const cnpjFormatado = cnpj.replace(/\D/g, '')
-    .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+  // 2. Cria registro na tabela empresas (preserva letras do CNPJ alfanumérico)
+  const cnpjFormatado = maskCpfCnpj(cnpj)
 
   const SEGMENTOS = [
     'Transportadora', 'Logística', 'Construção Civil', 'Agronegócio',

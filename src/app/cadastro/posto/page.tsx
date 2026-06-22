@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Fuel, Eye, EyeOff, Store, Info, Check, AlertCircle, Globe, Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import {
+  Fuel, Eye, EyeOff, Store, Info, Check, AlertCircle, Globe, Loader2,
+  BadgeCheck, HandCoins, ShieldCheck, Users, CheckCircle, ArrowLeft,
+} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { maskTelefone } from '@/lib/utils'
 
 // ─── Plans ─────────────────────────────────────────────────────────────────
 
@@ -18,6 +23,15 @@ type Plan = {
   maxPostos: string | null
   popular: boolean
 }
+
+const ease = [0.22, 1, 0.36, 1] as const
+
+const GANHOS = [
+  { icon: BadgeCheck,  label: 'Pré-aprovado', desc: 'Já chega reconhecido, com prova registrada.' },
+  { icon: HandCoins,   label: 'Recebimento garantido', desc: 'Sem inadimplência surpresa no fim do mês.' },
+  { icon: ShieldCheck, label: 'Fim do calote', desc: 'Sem assinatura negada nem contestação.' },
+  { icon: Users,       label: 'Clientes recorrentes', desc: 'Frotas B2B abastecendo no seu posto.' },
+]
 
 // ─── Step indicator ─────────────────────────────────────────────────────────
 
@@ -80,7 +94,6 @@ export default function CadastroPostoPage() {
     setCheckoutError('')
     setLoading(true)
     try {
-      // 1. Cria usuário no Supabase
       const cadastroRes = await fetch('/api/cadastro/posto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,16 +112,15 @@ export default function CadastroPostoPage() {
         return
       }
 
-      // 2. Inicia checkout no Stripe
       const plan = plans.find(p => p.id === selectedPlan)
       const checkoutRes = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          planId:       selectedPlan,
-          priceId:      plan?.stripePriceId,
-          email:        form.email,
-          nome:         form.nome,
+          planId:  selectedPlan,
+          priceId: plan?.stripePriceId,
+          email:   form.email,
+          nome:    form.nome,
         }),
       })
       const checkoutData = await checkoutRes.json()
@@ -126,236 +138,316 @@ export default function CadastroPostoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-      <Link href="/" className="flex items-center gap-2 mb-8">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Fuel size={16} className="text-white" />
+    <div className="h-screen flex overflow-hidden">
+      {/* ── Left panel — vitrine para postos ─────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-petrol-950">
+        <div className="absolute inset-0 bg-gradient-to-br from-petrol-900 via-petrol-950 to-[#03161a]" />
+        <div className="absolute inset-0 bg-grid opacity-[0.06]" />
+        <motion.div
+          aria-hidden
+          className="absolute -top-32 -left-24 w-96 h-96 rounded-full bg-fuel-500/15 blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          aria-hidden
+          className="absolute -bottom-24 -right-20 w-[30rem] h-[30rem] rounded-full bg-petrol-500/20 blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.75, 0.5] }}
+          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        />
+
+        <div className="relative z-10 flex flex-col justify-center gap-8 w-full p-8 xl:p-10 overflow-y-auto">
+          {/* logo */}
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="w-10 h-10 bg-fuel-500 rounded-xl flex items-center justify-center shadow-lg shadow-petrol-900/50">
+                <Fuel size={20} className="text-white" />
+              </span>
+              <span className="text-xl font-bold text-white tracking-tight">FuelLink</span>
+            </Link>
+          </motion.div>
+
+          {/* headline + ganhos */}
+          <div>
+            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease, delay: 0.1 }}>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-xs font-semibold text-petrol-100">
+                <Fuel size={13} className="text-fuel-300" />
+                Cadastro de posto
+              </span>
+              <h2 className="mt-4 text-3xl xl:text-[2.5rem] font-bold leading-[1.1] tracking-tight text-white">
+                O que sai da bomba,<br />
+                <span className="text-fuel-400">você recebe.</span>
+              </h2>
+              <p className="mt-3 text-petrol-100/70 text-[15px] leading-relaxed max-w-md">
+                Todo abastecimento chega pré-aprovado pela transportadora. Nada de assinatura
+                negada, contestação ou inadimplência surpresa.
+              </p>
+            </motion.div>
+
+            {/* card de ganhos */}
+            <motion.div
+              initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease, delay: 0.25 }}
+              className="mt-6 max-w-sm rounded-2xl bg-white/[0.07] border border-white/10 backdrop-blur-md p-4 shadow-2xl shadow-black/40"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-petrol-100/50 mb-3">
+                O que o seu posto ganha
+              </p>
+              <div className="space-y-3">
+                {GANHOS.map((g) => (
+                  <div key={g.label} className="flex items-start gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-fuel-500/15 flex items-center justify-center shrink-0">
+                      <g.icon size={16} className="text-fuel-300" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">{g.label}</p>
+                      <p className="text-xs text-petrol-100/60 leading-snug">{g.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* rodapé */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease, delay: 0.45 }}
+            className="flex items-center gap-2 text-sm text-petrol-100/70"
+          >
+            <CheckCircle size={16} className="text-fuel-300" />
+            Cadastro gratuito · pague só por CNPJ cadastrado
+          </motion.div>
         </div>
-        <span className="text-lg font-bold text-gray-900">FuelLink</span>
-      </Link>
+      </div>
 
-      {/* ── Step 1: dados da conta ───────────────────────────────────────── */}
-      {step === 1 && (
+      {/* ── Right panel — formulário ─────────────────────────────────────── */}
+      <div className="relative flex-1 flex items-center justify-center bg-white p-6 overflow-y-auto">
+        <Link
+          href="/"
+          className="absolute top-5 left-5 z-20 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft size={16} /> Voltar ao início
+        </Link>
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-            <StepDots step={1} />
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
-                <Store size={21} className="text-amber-500" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Criar conta de posto</h1>
-                <p className="text-sm text-gray-400">Você cadastra seus postos no painel.</p>
-              </div>
+          {/* Mobile logo */}
+          <Link href="/" className="flex lg:hidden items-center gap-2 justify-center mb-6">
+            <div className="w-8 h-8 bg-petrol-600 rounded-lg flex items-center justify-center">
+              <Fuel size={16} className="text-white" />
             </div>
+            <span className="text-lg font-bold text-gray-900">FuelLink</span>
+          </Link>
 
-            <div className="space-y-4">
-              <Input
-                label="Nome completo"
-                placeholder="Maria Andrade"
-                value={form.nome}
-                onChange={(e) => update('nome', e.target.value)}
-              />
-              <Input
-                label="Email"
-                type="email"
-                placeholder="maria@suaempresa.com.br"
-                value={form.email}
-                onChange={(e) => update('email', e.target.value)}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="Telefone"
-                  placeholder="(11) 99999-9999"
-                  value={form.telefone}
-                  onChange={(e) => update('telefone', e.target.value)}
-                />
-                <Input
-                  label="Cargo"
-                  placeholder="Proprietário"
-                  value={form.cargo}
-                  onChange={(e) => update('cargo', e.target.value)}
-                />
+          {/* Step 1 — dados da conta */}
+          {step === 1 && (
+            <div>
+              <StepDots step={1} />
+
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+                  <Store size={21} className="text-amber-500" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Criar conta de posto</h1>
+                  <p className="text-sm text-gray-400">Você cadastra seus postos no painel.</p>
+                </div>
               </div>
-              <div className="relative">
+
+              <div className="space-y-3">
                 <Input
-                  label="Senha"
-                  type={showPassword ? 'text' : 'password'}
+                  label="Nome completo"
+                  placeholder="Maria Andrade"
+                  value={form.nome}
+                  onChange={(e) => update('nome', e.target.value)}
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="maria@suaempresa.com.br"
+                  value={form.email}
+                  onChange={(e) => update('email', e.target.value)}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Telefone"
+                    placeholder="(11) 99999-9999"
+                    value={form.telefone}
+                    onChange={(e) => update('telefone', maskTelefone(e.target.value))}
+                    maxLength={15}
+                    inputMode="tel"
+                  />
+                  <Input
+                    label="Cargo"
+                    placeholder="Proprietário"
+                    value={form.cargo}
+                    onChange={(e) => update('cargo', e.target.value)}
+                  />
+                </div>
+                <div className="relative">
+                  <Input
+                    label="Senha"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={form.senha}
+                    onChange={(e) => update('senha', e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <Input
+                  label="Confirmar senha"
+                  type="password"
                   placeholder="••••••••"
-                  value={form.senha}
-                  onChange={(e) => update('senha', e.target.value)}
+                  value={form.confirmarSenha}
+                  onChange={(e) => update('confirmarSenha', e.target.value)}
+                  error={senhaError}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <Input
-                label="Confirmar senha"
-                type="password"
-                placeholder="••••••••"
-                value={form.confirmarSenha}
-                onChange={(e) => update('confirmarSenha', e.target.value)}
-                error={senhaError}
-              />
 
-              <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-                <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-blue-800 leading-relaxed">
-                  <strong>Gerencie múltiplos postos</strong> em uma única conta. A cobrança é por CNPJ: cada posto que você adicionar entra na assinatura.
+                <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                  <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-800 leading-relaxed">
+                    <strong>Gerencie múltiplos postos</strong> em uma única conta. A cobrança é por CNPJ: cada posto que você adicionar entra na assinatura.
+                  </p>
+                </div>
+
+                <Button
+                  className="w-full mt-1"
+                  onClick={() => setStep(2)}
+                  disabled={!step1Valid}
+                >
+                  Próximo — assinatura
+                </Button>
+              </div>
+
+              <p className="mt-5 text-sm text-gray-400 text-center">
+                Já tem uma conta?{' '}
+                <Link href="/login" className="text-blue-600 hover:underline">Entrar</Link>
+              </p>
+            </div>
+          )}
+
+          {/* Step 2 — assinatura */}
+          {step === 2 && (
+            <div>
+              <StepDots step={2} />
+
+              <div className="mb-5">
+                <h1 className="text-xl font-bold text-gray-900">Sua assinatura</h1>
+                <p className="text-sm text-gray-400 mt-0.5">
+                  Você paga por CNPJ (posto) cadastrado. Comece com o primeiro e adicione quantos
+                  quiser no painel — cada CNPJ entra na cobrança. Sem teto de postos.
                 </p>
               </div>
 
-              <Button
-                className="w-full mt-1"
-                onClick={() => setStep(2)}
-                disabled={!step1Valid}
-              >
-                Próximo — assinatura
-              </Button>
-            </div>
-          </div>
-
-          <p className="mt-6 text-sm text-gray-400 text-center">
-            Já tem uma conta?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline">Entrar</Link>
-          </p>
-        </div>
-      )}
-
-      {/* ── Step 2: seleção de plano ─────────────────────────────────────── */}
-      {step === 2 && (
-        <div className="w-full max-w-4xl">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-            <StepDots step={2} />
-
-            <div className="mb-6">
-              <h1 className="text-xl font-bold text-gray-900">Sua assinatura</h1>
-              <p className="text-sm text-gray-400 mt-0.5">
-                Você paga por CNPJ (posto) cadastrado. Comece com o primeiro e adicione quantos quiser
-                no painel — cada CNPJ entra na cobrança. Sem teto de postos.
-              </p>
-            </div>
-
-            {/* Carregando planos */}
-            {plansLoading && (
-              <div className="flex items-center justify-center gap-2 py-16 text-gray-400">
-                <Loader2 size={20} className="animate-spin" />
-                <span className="text-sm">Carregando planos…</span>
-              </div>
-            )}
-
-            {plansError && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
-                <AlertCircle size={15} className="shrink-0" /> {plansError}
-              </div>
-            )}
-
-            {/* Plan cards */}
-            {!plansLoading && !plansError && (
-              <>
-                <div className={plans.length === 1
-                  ? 'mb-6 max-w-sm mx-auto'
-                  : `grid gap-4 mb-6 ${plans.length <= 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
-                  {plans.map((plan) => {
-                    const isSelected = selectedPlan === plan.id
-                    const maxLabel = 'Cobrado por CNPJ cadastrado'
-
-                    return (
-                      <button
-                        key={plan.id}
-                        onClick={() => setSelectedPlan(plan.id)}
-                        className={`relative text-left rounded-xl border-2 p-5 transition-all ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-50 shadow-sm shadow-blue-100'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        {plan.popular && (
-                          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                            <span className="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide whitespace-nowrap">
-                              Mais popular
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center mb-3">
-                          <Store size={17} className="text-blue-500" />
-                        </div>
-
-                        <p className="font-semibold text-gray-900 mb-0.5">{plan.nome}</p>
-                        <div className="flex items-baseline gap-0.5 mb-1">
-                          <span className="text-xs text-gray-400">R$</span>
-                          <span className="text-2xl font-bold text-gray-900">
-                            {plan.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                          <span className="text-xs text-gray-400">/CNPJ·mês</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-3">{maxLabel}</p>
-
-                        {plan.descricao && (
-                          <p className="text-xs text-gray-400 leading-relaxed">{plan.descricao}</p>
-                        )}
-
-                        {isSelected && (
-                          <div className="absolute top-3 right-3 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
-                            <Check size={11} className="text-white" />
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
+              {plansLoading && (
+                <div className="flex items-center justify-center gap-2 py-12 text-gray-400">
+                  <Loader2 size={20} className="animate-spin" />
+                  <span className="text-sm">Carregando planos…</span>
                 </div>
+              )}
 
-                {/* Selected plan summary */}
-                {(() => {
-                  const plan = plans.find((p) => p.id === selectedPlan)
-                  if (!plan) return null
-                  return (
-                    <div className="flex items-center justify-between gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl mb-4">
-                      <div className="flex items-center gap-3">
-                        <Globe size={16} className="text-gray-400" />
+              {plansError && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
+                  <AlertCircle size={15} className="shrink-0" /> {plansError}
+                </div>
+              )}
+
+              {!plansLoading && !plansError && (
+                <>
+                  <div className={plans.length === 1 ? 'mb-5' : 'grid gap-4 mb-5 grid-cols-2'}>
+                    {plans.map((plan) => {
+                      const isSelected = selectedPlan === plan.id
+                      return (
+                        <button
+                          key={plan.id}
+                          onClick={() => setSelectedPlan(plan.id)}
+                          className={`relative w-full text-left rounded-xl border-2 p-5 transition-all ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50 shadow-sm shadow-blue-100'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          {plan.popular && (
+                            <div className="absolute -top-3 left-5">
+                              <span className="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide whitespace-nowrap">
+                                Plano único
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center mb-3">
+                            <Store size={17} className="text-blue-500" />
+                          </div>
+
+                          <p className="font-semibold text-gray-900 mb-0.5">{plan.nome}</p>
+                          <div className="flex items-baseline gap-0.5 mb-1">
+                            <span className="text-xs text-gray-400">R$</span>
+                            <span className="text-2xl font-bold text-gray-900">
+                              {plan.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                            <span className="text-xs text-gray-400">/CNPJ·mês</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-3">Cobrado por CNPJ cadastrado</p>
+
+                          {plan.descricao && (
+                            <p className="text-xs text-gray-400 leading-relaxed">{plan.descricao}</p>
+                          )}
+
+                          {isSelected && (
+                            <div className="absolute top-3 right-3 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                              <Check size={11} className="text-white" />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {(() => {
+                    const plan = plans.find((p) => p.id === selectedPlan)
+                    if (!plan) return null
+                    return (
+                      <div className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-100 rounded-xl mb-4">
+                        <Globe size={16} className="text-gray-400 shrink-0" />
                         <div>
                           <p className="text-sm font-semibold text-gray-800">
-                            {plan.nome} — R$ {plan.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} por CNPJ/mês
+                            R$ {plan.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} por CNPJ/mês
                           </p>
                           <p className="text-xs text-gray-400">
-                            Começa com 1 CNPJ. Cada novo posto cadastrado soma na cobrança · Cancele quando quiser
+                            Começa com 1 CNPJ · cada posto soma na cobrança · cancele quando quiser
                           </p>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 shrink-0">Sem teto de postos</p>
-                    </div>
-                  )
-                })()}
-              </>
-            )}
+                    )
+                  })()}
+                </>
+              )}
 
-            {checkoutError && (
-              <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 mb-4">
-                <AlertCircle size={13} className="shrink-0" /> {checkoutError}
+              {checkoutError && (
+                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5 mb-4">
+                  <AlertCircle size={13} className="shrink-0" /> {checkoutError}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={() => { setStep(1); setCheckoutError('') }}>
+                  ← Voltar
+                </Button>
+                <Button className="flex-1" onClick={handleAssinar} isLoading={loading} disabled={!selectedPlan || plansLoading}>
+                  Assinar e pagar →
+                </Button>
               </div>
-            )}
 
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => { setStep(1); setCheckoutError('') }}>
-                ← Voltar
-              </Button>
-              <Button className="flex-1" onClick={handleAssinar} isLoading={loading} disabled={!selectedPlan || plansLoading}>
-                Assinar e pagar com cartão →
-              </Button>
+              <p className="text-center text-xs text-gray-400 mt-4">
+                Pagamento seguro processado pelo Stripe.
+              </p>
             </div>
-
-            <p className="text-center text-xs text-gray-400 mt-4">
-              Pagamento seguro processado pelo Stripe. Você será redirecionado para a página de pagamento.
-            </p>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

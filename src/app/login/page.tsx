@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  Fuel, Eye, EyeOff, ShieldCheck, CheckCircle2, Car, Hash, MapPin, ScanLine, BadgeCheck,
+  Fuel, Eye, EyeOff, ShieldCheck, CheckCircle2, Car, Hash, MapPin, ScanLine, BadgeCheck, ArrowLeft,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -188,7 +188,13 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right panel — formulário ─────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center bg-white p-8 overflow-y-auto">
+      <div className="relative flex-1 flex items-center justify-center bg-white p-8 overflow-y-auto">
+        <Link
+          href="/"
+          className="absolute top-5 left-5 z-20 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft size={16} /> Voltar ao início
+        </Link>
         <div className="w-full max-w-sm py-8">
 
           {/* Mobile logo */}
