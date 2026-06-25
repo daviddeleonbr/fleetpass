@@ -89,6 +89,7 @@ type PropostaForm = {
   validade: string
   observacoes: string
   exigeCertificado: boolean
+  exigeContrato: boolean
 }
 
 function formatCondicao(item: PropostaFormItem): string {
@@ -174,6 +175,7 @@ export default function SolicitacoesPage() {
     validade: '15 dias',
     observacoes: '',
     exigeCertificado: false,
+    exigeContrato: true,
   })
   const [enviandoProposta, setEnviandoProposta] = useState(false)
 
@@ -236,6 +238,7 @@ export default function SolicitacoesPage() {
       validade: '15 dias',
       observacoes: '',
       exigeCertificado: false,
+      exigeContrato: true,
     })
     setPropostaStep(1)
     setPropostaModal(id)
@@ -272,6 +275,7 @@ export default function SolicitacoesPage() {
       validade: sol.proposta.validade || '15 dias',
       observacoes: sol.proposta.observacoes || '',
       exigeCertificado: (sol.proposta as any).exigeCertificado ?? false,
+      exigeContrato: (sol.proposta as any).exigeContrato ?? true,
     })
     setPropostaStep(1)
     setPropostaModal(id)
@@ -316,7 +320,8 @@ export default function SolicitacoesPage() {
           volumeMinimo: propostaForm.volumeMinimo,
           validade: propostaForm.validade,
           observacoes: propostaForm.observacoes,
-          exigeCertificado: propostaForm.exigeCertificado,
+          exigeCertificado: propostaForm.exigeContrato ? propostaForm.exigeCertificado : false,
+          exigeContrato: propostaForm.exigeContrato,
         }),
       })
       if (!res.ok) throw new Error(`Erro ao enviar proposta (${res.status})`)
@@ -873,25 +878,47 @@ export default function SolicitacoesPage() {
                   />
                 </div>
 
-                {/* Toggle: exigir certificado digital */}
+                {/* Toggle: exigir contrato assinado */}
                 <div className="border border-gray-100 rounded-lg p-3 bg-gray-50">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={propostaForm.exigeCertificado}
-                      onChange={(e) => setPropostaForm((p) => ({ ...p, exigeCertificado: e.target.checked }))}
-                      className="mt-0.5 w-4 h-4 accent-blue-600"
+                      checked={propostaForm.exigeContrato}
+                      onChange={(e) => setPropostaForm((p) => ({ ...p, exigeContrato: e.target.checked }))}
+                      className="mt-0.5 w-4 h-4 accent-petrol-600"
                     />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800">Exigir assinatura com certificado digital (A1)</p>
+                      <p className="text-sm font-medium text-gray-800">Exigir contrato assinado</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {propostaForm.exigeCertificado
-                          ? 'A empresa precisará assinar o contrato com um certificado digital ICP-Brasil válido (CNPJ deve bater com o cadastro).'
-                          : 'A empresa assinará com um clique de consentimento, da mesma forma que o posto — o sistema registrará IP, dispositivo e hash do documento como evidência.'}
+                        {propostaForm.exigeContrato
+                          ? 'Ao aceitar, ambas as partes assinam um contrato antes da parceria ficar ativa.'
+                          : 'Sem contrato: ao aceitar a proposta, a parceria é ativada imediatamente.'}
                       </p>
                     </div>
                   </label>
                 </div>
+
+                {/* Toggle: exigir certificado digital (só quando há contrato) */}
+                {propostaForm.exigeContrato && (
+                  <div className="border border-gray-100 rounded-lg p-3 bg-gray-50">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={propostaForm.exigeCertificado}
+                        onChange={(e) => setPropostaForm((p) => ({ ...p, exigeCertificado: e.target.checked }))}
+                        className="mt-0.5 w-4 h-4 accent-blue-600"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">Exigir assinatura com certificado digital (A1)</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {propostaForm.exigeCertificado
+                            ? 'A empresa precisará assinar o contrato com um certificado digital ICP-Brasil válido (CNPJ deve bater com o cadastro).'
+                            : 'A empresa assinará com um clique de consentimento, da mesma forma que o posto — o sistema registrará IP, dispositivo e hash do documento como evidência.'}
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-1">
                   <Button variant="secondary" onClick={() => setPropostaStep(3)}>

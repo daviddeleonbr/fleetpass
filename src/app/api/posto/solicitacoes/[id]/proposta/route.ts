@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!posto) return NextResponse.json({ error: 'Sem permissão para esta solicitação.' }, { status: 403 })
 
     const body = await req.json()
-    const { combustiveis, ciclo, limiteCredito, volumeMinimo, validade, observacoes, comentario, exigeCertificado } = body
+    const { combustiveis, ciclo, limiteCredito, volumeMinimo, validade, observacoes, comentario, exigeCertificado, exigeContrato } = body
 
     const validadeDias = parseInt(String(validade).replace(/\D/g, '')) || 15
 
@@ -79,6 +79,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       status:                  'pendente',
       versao:                  proximaVersao,
       exige_certificado:       !!exigeCertificado,
+      // Default true quando não enviado (retrocompat); o posto decide no form.
+      exige_contrato:          exigeContrato === undefined ? true : !!exigeContrato,
     }).select().single()
 
     if (propostaError) throw propostaError

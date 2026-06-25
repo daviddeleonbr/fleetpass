@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Plus, X, MapPin, Check, AlertCircle, Store, Loader2, FileSignature, MessageCircle } from 'lucide-react'
+import { FileText, Plus, X, MapPin, Check, AlertCircle, Store, Loader2, FileSignature, MessageCircle, Mail } from 'lucide-react'
 import { NegociacaoPainel } from '@/components/parcerias/negociacao-painel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -178,14 +178,18 @@ export default function ParceriasPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ propostaId: propostaSelecionada.proposta!.id }),
       })
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
         throw new Error(data?.error ?? 'Erro ao aceitar proposta.')
       }
       const nomePosto = propostaSelecionada.posto
       setPropostaModal(null)
       setAceiteConfirm(false)
-      setSucesso(`Proposta aceita! O contrato com ${nomePosto} foi gerado e aguarda assinatura de ambas as partes.`)
+      setSucesso(
+        data?.semContrato
+          ? `Proposta aceita! A parceria com ${nomePosto} já está ativa. Você já pode emitir requisições.`
+          : `Proposta aceita! O contrato com ${nomePosto} foi gerado e aguarda assinatura de ambas as partes.`
+      )
       setTimeout(() => setSucesso(null), 5000)
       await fetchParcerias()
     } catch (err) {
@@ -227,8 +231,8 @@ export default function ParceriasPage() {
             <h1 className="text-2xl font-bold text-gray-900">Parcerias</h1>
             <p className="text-gray-500 text-sm">Gerencie suas parcerias com postos de combustível.</p>
           </div>
-          <Link href="/empresa/marketplace">
-            <Button size="sm"><Plus size={14} /> Buscar postos</Button>
+          <Link href="/empresa/convites">
+            <Button size="sm"><Mail size={14} /> Ver convites</Button>
           </Link>
         </div>
         <div className="flex flex-col items-center gap-3 py-16 text-gray-400">
@@ -247,8 +251,8 @@ export default function ParceriasPage() {
             <h1 className="text-2xl font-bold text-gray-900">Parcerias</h1>
             <p className="text-gray-500 text-sm">Gerencie suas parcerias com postos de combustível.</p>
           </div>
-          <Link href="/empresa/marketplace">
-            <Button size="sm"><Plus size={14} /> Buscar postos</Button>
+          <Link href="/empresa/convites">
+            <Button size="sm"><Mail size={14} /> Ver convites</Button>
           </Link>
         </div>
         <div className="text-center py-12 text-gray-400">
@@ -266,8 +270,8 @@ export default function ParceriasPage() {
           <h1 className="text-2xl font-bold text-gray-900">Parcerias</h1>
           <p className="text-gray-500 text-sm">Gerencie suas parcerias com postos de combustível.</p>
         </div>
-        <Link href="/empresa/marketplace">
-          <Button size="sm"><Plus size={14} /> Buscar postos</Button>
+        <Link href="/empresa/convites">
+          <Button size="sm"><Mail size={14} /> Ver convites</Button>
         </Link>
       </div>
 
@@ -686,7 +690,7 @@ export default function ParceriasPage() {
             </div>
           )}
           <p className="text-sm text-gray-600">
-            Ao recusar, a solicitação será encerrada. O posto será notificado e você poderá buscar outros parceiros no marketplace.
+            Ao recusar, a solicitação será encerrada. O posto será notificado e você poderá aguardar novos convites de postos parceiros.
           </p>
           {actionError && (
             <p className="text-sm text-red-600">{actionError}</p>

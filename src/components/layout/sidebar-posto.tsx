@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 import {
   Home, FileText, BarChart2, Settings, Users, Handshake,
-  ClipboardList, Fuel, Building2, Droplets, CalendarDays, Store, Receipt, Clock,
+  ClipboardList, Fuel, Building2, Droplets, CalendarDays, Store, Receipt, Clock, UserPlus,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -30,6 +30,7 @@ const navSections: NavSection[] = [
   {
     title: 'Parcerias',
     items: [
+      { label: 'Clientes',     href: '/posto/clientes',              icon: UserPlus },
       { label: 'Solicitações', href: '/posto/parcerias/solicitacoes', icon: ClipboardList },
       { label: 'Parceiros',    href: '/posto/parcerias/ativos',       icon: Handshake },
     ],
