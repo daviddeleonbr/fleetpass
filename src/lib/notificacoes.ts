@@ -12,6 +12,9 @@ export type NotificacaoTipo =
   | 'parceria_ativa'
   | 'parceria_suspensa'
   | 'parceria_encerrada'
+  | 'convite_recebido'
+  | 'convite_aceito'
+  | 'convite_recusado'
 
 interface NotificacaoInput {
   perfilId: string

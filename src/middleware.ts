@@ -15,6 +15,8 @@ const PUBLIC_ROUTES = [
   // Tela de validação do frentista: faz o próprio login (modelo terminal/quiosque).
   // O acesso aos dados é protegido nas rotas de API, não aqui.
   '/frentista/validar',
+  // Landing pública do convite do posto (/convite/[token]) — antes de existir sessão.
+  '/convite',
 ]
 
 const ROLE_HOME: Record<string, string> = {

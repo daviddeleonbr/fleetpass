@@ -29,6 +29,10 @@ export async function POST(req: NextRequest) {
     const { data: parceiraId, error: rpcError } = await svc.rpc('aceitar_proposta', { p_proposta_id: propostaId })
     if (rpcError) return NextResponse.json({ error: rpcError.message }, { status: 400 })
 
+    // Quando a proposta não exige contrato, a parceria já nasce 'ativa' (sem assinatura).
+    const { data: parc } = await svc.from('parcerias').select('status').eq('id', parceiraId as string).single()
+    const semContrato = (parc as any)?.status === 'ativa'
+
     // Marca as demais propostas pendentes da mesma solicitação como 'substituida'
     await (svc as any)
       .from('propostas')
@@ -54,18 +58,21 @@ export async function POST(req: NextRequest) {
         const destino = await perfilDoPosto(svc, propCompleta.posto_id)
         if (destino) {
           const { data: empresaRow } = await svc.from('empresas').select('nome_empresa').eq('id', propCompleta.empresa_id).maybeSingle()
+          const nome = (empresaRow as any)?.nome_empresa ?? 'A empresa'
           await criarNotificacao(svc, {
             perfilId: destino,
-            tipo: 'proposta_aceita',
-            titulo: 'Proposta aceita',
-            descricao: `${(empresaRow as any)?.nome_empresa ?? 'A empresa'} aceitou sua proposta. O contrato está pronto para assinatura.`,
+            tipo: semContrato ? 'parceria_ativa' : 'proposta_aceita',
+            titulo: semContrato ? 'Parceria ativada' : 'Proposta aceita',
+            descricao: semContrato
+              ? `${nome} aceitou sua proposta. A parceria está ativa (sem contrato).`
+              : `${nome} aceitou sua proposta. O contrato está pronto para assinatura.`,
             link: '/posto/parcerias/solicitacoes',
           })
         }
       }
     } catch {}
 
-    return NextResponse.json({ parceiraId })
+    return NextResponse.json({ parceiraId, semContrato })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
