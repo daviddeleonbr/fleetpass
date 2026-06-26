@@ -36,7 +36,7 @@ export default function ConvitePage({ params }: { params: Promise<{ token: strin
           <span className="w-10 h-10 bg-petrol-600 rounded-xl flex items-center justify-center">
             <Fuel size={20} className="text-white" />
           </span>
-          <span className="text-xl font-bold text-gray-900">FuelLink</span>
+          <span className="text-xl font-bold text-gray-900">FleetPass</span>
         </div>
 
         {loading ? (
@@ -91,7 +91,7 @@ export default function ConvitePage({ params }: { params: Promise<{ token: strin
               {info.jaCadastrada ? (
                 <>
                   <p className="text-sm text-gray-500">
-                    Sua empresa já tem conta no FuelLink. Faça login para aceitar o convite.
+                    Sua empresa já tem conta no FleetPass. Faça login para aceitar o convite.
                   </p>
                   <Link
                     href="/login"

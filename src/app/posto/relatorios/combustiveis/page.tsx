@@ -63,14 +63,14 @@ export default function RelatorioCombustiveisPage() {
         { label: 'Volume total', valor: `${totalLitros} L` },
         { label: 'Receita total', valor: formatBRL(totalValor) },
       ],
-      nomeArquivo: `fuellink-combustiveis-${range.inicio}-a-${range.fim}`,
+      nomeArquivo: `fleetpass-combustiveis-${range.inicio}-a-${range.fim}`,
     })
     setLoadingPDF(false)
   }
 
   const handleExcel = async () => {
     setLoadingXLS(true)
-    await exportarExcel(COLUNAS, linhas, `fuellink-combustiveis-${range.inicio}-a-${range.fim}`, 'Por Combustível')
+    await exportarExcel(COLUNAS, linhas, `fleetpass-combustiveis-${range.inicio}-a-${range.fim}`, 'Por Combustível')
     setLoadingXLS(false)
   }
 

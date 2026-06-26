@@ -53,14 +53,14 @@ export default function RelatorioEmpresasPage() {
         { label: 'Pendente', valor: formatBRL(totalPendente) },
         { label: 'Total geral', valor: formatBRL(totalGeral) },
       ],
-      nomeArquivo: `fuellink-empresas-${range.inicio}-a-${range.fim}`,
+      nomeArquivo: `fleetpass-empresas-${range.inicio}-a-${range.fim}`,
     })
     setLoadingPDF(false)
   }
 
   const handleExcel = async () => {
     setLoadingXLS(true)
-    await exportarExcel(COLUNAS, linhas, `fuellink-empresas-${range.inicio}-a-${range.fim}`, 'Por Empresa')
+    await exportarExcel(COLUNAS, linhas, `fleetpass-empresas-${range.inicio}-a-${range.fim}`, 'Por Empresa')
     setLoadingXLS(false)
   }
 

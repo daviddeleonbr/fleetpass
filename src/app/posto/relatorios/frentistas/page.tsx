@@ -144,14 +144,14 @@ export default function RelatorioFrentistasPage() {
         { label: 'Volume total', valor: `${totalLitros.toFixed(1)} L` },
         { label: 'Valor total', valor: formatBRL(totalGeral) },
       ],
-      nomeArquivo: `fuellink-frentistas-${range.inicio}-a-${range.fim}`,
+      nomeArquivo: `fleetpass-frentistas-${range.inicio}-a-${range.fim}`,
     })
     setLoadingPDF(false)
   }
 
   const handleExcel = async () => {
     setLoadingXLS(true)
-    await exportarExcel(COLUNAS, linhas, `fuellink-frentistas-${range.inicio}-a-${range.fim}`, 'Por Frentista')
+    await exportarExcel(COLUNAS, linhas, `fleetpass-frentistas-${range.inicio}-a-${range.fim}`, 'Por Frentista')
     setLoadingXLS(false)
   }
 

@@ -25,9 +25,9 @@ export async function enviarEmailConvite({ to, postoNome, link, mensagem }: Emai
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0f172a">
     <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:20px">
       <div style="width:32px;height:32px;border-radius:8px;background:#0e8285;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700">FL</div>
-      <span style="font-size:18px;font-weight:700">FuelLink</span>
+      <span style="font-size:18px;font-weight:700">FleetPass</span>
     </div>
-    <h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(postoNome)} convidou você para o FuelLink</h1>
+    <h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(postoNome)} convidou você para o FleetPass</h1>
     <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 16px">
       Gerencie os abastecimentos da sua frota neste posto: emita requisições pré-aprovadas,
       controle limites por veículo e acompanhe o faturamento — tudo em um só lugar.
@@ -47,7 +47,7 @@ export async function enviarEmailConvite({ to, postoNome, link, mensagem }: Emai
       body: JSON.stringify({
         from,
         to,
-        subject: `${postoNome} convidou você para o FuelLink`,
+        subject: `${postoNome} convidou você para o FleetPass`,
         html,
       }),
     })

@@ -38,7 +38,7 @@ export function EfeitoRede() {
             Uma rede que cresce mais forte a cada parceiro
           </h2>
           <p className="mt-4 text-lg text-petrol-100/80 leading-relaxed">
-            O FuelLink vale mais quanto mais gente participa. Entrando agora, você ajuda a construir
+            O FleetPass vale mais quanto mais gente participa. Entrando agora, você ajuda a construir
             o ecossistema — e colhe os benefícios de estar entre os primeiros.
           </p>
         </Reveal>

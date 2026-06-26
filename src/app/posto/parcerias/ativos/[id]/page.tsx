@@ -289,7 +289,7 @@ export default function ContratoPostoPage({ params }: { params: Promise<{ id: st
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Fuel size={16} className="text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900">FuelLink</span>
+            <span className="text-lg font-bold text-gray-900">FleetPass</span>
           </div>
           <h1 className="text-lg font-bold text-gray-900 tracking-wide uppercase">Contrato de Parceria Comercial</h1>
           <p className="text-sm text-gray-400 mt-1">N° {contratoNum} · Autenticação: {contrato.authNum}</p>
@@ -318,7 +318,7 @@ export default function ContratoPostoPage({ params }: { params: Promise<{ id: st
         <div className="px-8 py-6 border-b border-gray-100">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">2. Do Objeto</h2>
           <p className="text-sm text-gray-600 leading-relaxed mb-3">
-            O presente contrato tem por objeto a prestação de serviços de abastecimento de combustível pela Contratada à Contratante, mediante requisições digitais geradas pela plataforma FuelLink, conforme condições acordadas entre as partes.
+            O presente contrato tem por objeto a prestação de serviços de abastecimento de combustível pela Contratada à Contratante, mediante requisições digitais geradas pela plataforma FleetPass, conforme condições acordadas entre as partes.
           </p>
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
@@ -436,7 +436,7 @@ export default function ContratoPostoPage({ params }: { params: Promise<{ id: st
         <div className="px-8 py-6 border-b border-gray-100">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">7. Da Autenticação Digital</h2>
           <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-            Este contrato foi celebrado digitalmente pela plataforma FuelLink, com validade jurídica nos termos da Lei n° 14.063/2020 e MP 2.200-2/2001.
+            Este contrato foi celebrado digitalmente pela plataforma FleetPass, com validade jurídica nos termos da Lei n° 14.063/2020 e MP 2.200-2/2001.
           </p>
           <div className="space-y-4">
             {/* Auth Empresa */}
@@ -661,7 +661,7 @@ export default function ContratoPostoPage({ params }: { params: Promise<{ id: st
         {/* Footer do contrato */}
         <div className="px-8 py-3 bg-gray-50 border-b border-gray-100 text-center print:border-t print:border-gray-300 print:mt-6 print:pt-4">
           <p className="text-xs text-gray-400">
-            Documento gerado e autenticado pela plataforma FuelLink · {contrato.authNum} · {contrato.authData}
+            Documento gerado e autenticado pela plataforma FleetPass · {contrato.authNum} · {contrato.authData}
           </p>
           <p className="text-xs text-gray-300 mt-1 hidden print:block">
             Este documento possui validade jurídica nos termos da Lei n° 14.063/2020 e MP 2.200-2/2001.

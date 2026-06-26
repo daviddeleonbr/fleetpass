@@ -107,7 +107,7 @@ export default function MotoristaHomePage() {
             <Car size={30} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Entrar</h1>
-          <p className="text-sm text-gray-500 mt-1">Acesse o app FuelLink para motoristas.</p>
+          <p className="text-sm text-gray-500 mt-1">Acesse o app FleetPass para motoristas.</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">

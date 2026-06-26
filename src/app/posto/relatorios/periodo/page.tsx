@@ -71,14 +71,14 @@ export default function RelatorioPeriodoPage() {
         { label: 'Média diária', valor: formatBRL(mediaDiaria) },
         { label: 'Receita total', valor: formatBRL(totalValor) },
       ],
-      nomeArquivo: `fuellink-periodo-${range.inicio}-a-${range.fim}`,
+      nomeArquivo: `fleetpass-periodo-${range.inicio}-a-${range.fim}`,
     })
     setLoadingPDF(false)
   }
 
   const handleExcel = async () => {
     setLoadingXLS(true)
-    await exportarExcel(COLUNAS, linhas, `fuellink-periodo-${range.inicio}-a-${range.fim}`, 'Por Período')
+    await exportarExcel(COLUNAS, linhas, `fleetpass-periodo-${range.inicio}-a-${range.fim}`, 'Por Período')
     setLoadingXLS(false)
   }
 

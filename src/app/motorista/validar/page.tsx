@@ -101,7 +101,7 @@ function ValidarMotoristaInner() {
           const token = extractToken(decoded)
           await stopScanner()
           if (token) verificar(token)
-          else setScanError('QR Code não reconhecido pelo FuelLink.')
+          else setScanError('QR Code não reconhecido pelo FleetPass.')
         },
         () => { /* ignora frames sem leitura */ },
       )
@@ -183,7 +183,7 @@ function ValidarMotoristaInner() {
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-gray-400 justify-center">
-            <ShieldCheck size={13} className="text-emerald-500" /> Verificado pela assinatura digital do FuelLink
+            <ShieldCheck size={13} className="text-emerald-500" /> Verificado pela assinatura digital do FleetPass
           </div>
 
           <Button variant="secondary" className="w-full" onClick={reset}>Escanear outro</Button>

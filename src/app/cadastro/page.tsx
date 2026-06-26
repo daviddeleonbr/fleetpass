@@ -14,11 +14,11 @@ export default function CadastroPage() {
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
           <Fuel size={16} className="text-white" />
         </div>
-        <span className="text-lg font-bold text-gray-900">FuelLink</span>
+        <span className="text-lg font-bold text-gray-900">FleetPass</span>
       </Link>
 
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Como você quer usar o FuelLink?</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Como você quer usar o FleetPass?</h1>
         <p className="text-gray-500 mt-2">Escolha o perfil que melhor representa você.</p>
       </div>
 

@@ -89,7 +89,7 @@ export default function RedefinirSenhaPage() {
               <span className="w-10 h-10 bg-petrol-500 rounded-xl flex items-center justify-center shadow-lg shadow-petrol-900/50">
                 <Fuel size={20} className="text-white" />
               </span>
-              <span className="text-xl font-bold text-white tracking-tight">FuelLink</span>
+              <span className="text-xl font-bold text-white tracking-tight">FleetPass</span>
             </Link>
           </motion.div>
 
@@ -103,7 +103,7 @@ export default function RedefinirSenhaPage() {
               <span className="text-fuel-400">Crie sua nova senha.</span>
             </h2>
             <p className="mt-3 text-petrol-100/70 text-[15px] leading-relaxed max-w-md">
-              Escolha uma senha forte e única. Você usará ela para acessar o FuelLink a partir de agora.
+              Escolha uma senha forte e única. Você usará ela para acessar o FleetPass a partir de agora.
             </p>
             <div className="mt-6 flex items-center gap-2 text-sm text-petrol-100/70">
               <ShieldCheck size={16} className="text-fuel-300" /> Conexão segura e link de uso único

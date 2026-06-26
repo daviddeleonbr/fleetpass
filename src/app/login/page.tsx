@@ -82,7 +82,7 @@ export default function LoginPage() {
               <span className="w-10 h-10 bg-petrol-500 rounded-xl flex items-center justify-center shadow-lg shadow-petrol-900/50">
                 <Fuel size={20} className="text-white" />
               </span>
-              <span className="text-xl font-bold text-white tracking-tight">FuelLink</span>
+              <span className="text-xl font-bold text-white tracking-tight">FleetPass</span>
             </Link>
           </motion.div>
 
@@ -202,7 +202,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 bg-petrol-600 rounded-lg flex items-center justify-center">
               <Fuel size={16} className="text-white" />
             </div>
-            <span className="font-bold text-gray-900">FuelLink</span>
+            <span className="font-bold text-gray-900">FleetPass</span>
           </Link>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Bem-vindo de volta</h1>

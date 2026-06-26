@@ -51,7 +51,7 @@ export function SidebarEmpresa() {
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <Fuel size={16} className="text-white" />
           </div>
-          <span className="text-lg font-bold text-gray-900">FuelLink</span>
+          <span className="text-lg font-bold text-gray-900">FleetPass</span>
         </Link>
       </div>
 

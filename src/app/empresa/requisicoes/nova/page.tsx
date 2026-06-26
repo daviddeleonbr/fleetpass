@@ -370,7 +370,7 @@ export default function NovaRequisicaoPage() {
               <div className="bg-blue-600 px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Fuel size={15} className="text-blue-200" />
-                  <span className="text-xs font-semibold text-blue-100 uppercase tracking-wider">FuelLink</span>
+                  <span className="text-xs font-semibold text-blue-100 uppercase tracking-wider">FleetPass</span>
                 </div>
                 <span className="text-xs text-blue-200 font-medium">Requisição de abastecimento</span>
               </div>

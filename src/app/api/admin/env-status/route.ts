@@ -4,7 +4,7 @@ const GROUPS = {
   asaas: [
     { key: 'ASAAS_API_KEY',       label: 'Chave de API Asaas' },
     { key: 'ASAAS_ENV',           label: 'Ambiente (sandbox / production)' },
-    { key: 'FUELLINK_TAXA_SPLIT', label: 'Taxa split FuelLink (%)' },
+    { key: 'FUELLINK_TAXA_SPLIT', label: 'Taxa split FleetPass (%)' },
   ],
   supabase: [
     { key: 'NEXT_PUBLIC_SUPABASE_URL',      label: 'URL do projeto' },

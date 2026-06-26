@@ -67,7 +67,7 @@ export default function PostoSucessoPage() {
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
           <Fuel size={16} className="text-white" />
         </div>
-        <span className="text-lg font-bold text-gray-900">FuelLink</span>
+        <span className="text-lg font-bold text-gray-900">FleetPass</span>
       </Link>
 
       <Suspense fallback={<div className="w-full max-w-md bg-white rounded-2xl border border-gray-100 shadow-sm p-8 h-64 animate-pulse" />}>

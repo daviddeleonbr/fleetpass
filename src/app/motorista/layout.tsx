@@ -10,7 +10,7 @@ export default function MotoristaLayout({ children }: { children: React.ReactNod
           <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
             <Fuel size={14} className="text-white" />
           </div>
-          <span className="text-base font-bold text-white tracking-tight">FuelLink</span>
+          <span className="text-base font-bold text-white tracking-tight">FleetPass</span>
         </Link>
         <span className="text-xs text-blue-200 font-medium">App do Motorista</span>
       </header>

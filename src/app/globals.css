@@ -32,7 +32,7 @@
   --color-fuel-900: #782f10;
   --color-fuel-950: #5f2810;
 
-  /* ── Identidade FuelLink aplicada a TODA a app ───────────────────────────
+  /* ── Identidade FleetPass aplicada a TODA a app ───────────────────────────
      Remapeia a paleta padrão do Tailwind para o design system da landing:
      marca (azul/índigo/roxo/ciano) → PETRÓLEO; acento (âmbar/laranja) → FUEL.
      Assim todo `blue-*`/`indigo-*`/`amber-*` já existente herda o tema, sem

@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   ]
   const kpiRow2 = [
     { label: 'GMV/mês', value: formatBRL(k.gmvMes), icon: TrendingUp, color: 'emerald' },
-    { label: `Receita FuelLink (${k.taxaPct}%)`, value: formatBRL(k.receitaMes), icon: DollarSign, color: 'indigo' },
+    { label: `Receita FleetPass (${k.taxaPct}%)`, value: formatBRL(k.receitaMes), icon: DollarSign, color: 'indigo' },
     { label: 'Faturas', value: String(k.faturas), icon: Receipt, color: 'amber' },
   ]
   const maxPosto = Math.max(1, ...data.crescimentoPostos.map(d => d.valor))
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Visão geral da plataforma FuelLink</p>
+        <p className="text-sm text-gray-500 mt-0.5">Visão geral da plataforma FleetPass</p>
       </div>
 
       {[kpiRow1, kpiRow2].map((row, ri) => (

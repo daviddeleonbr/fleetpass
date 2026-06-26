@@ -39,11 +39,11 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           {/* Marca */}
           <div>
-            <Link href="/" className="flex items-center gap-2" aria-label="FuelLink — início">
+            <Link href="/" className="flex items-center gap-2" aria-label="FleetPass — início">
               <span className="w-9 h-9 bg-petrol-600 rounded-xl flex items-center justify-center">
                 <Fuel size={18} className="text-white" />
               </span>
-              <span className="text-lg font-bold text-white">FuelLink</span>
+              <span className="text-lg font-bold text-white">FleetPass</span>
             </Link>
             <p className="mt-4 text-sm leading-relaxed max-w-xs">
               A plataforma que conecta transportadoras e postos para gestão de parcerias
@@ -80,7 +80,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs">© {new Date().getFullYear()} FuelLink. Todos os direitos reservados.</p>
+          <p className="text-xs">© {new Date().getFullYear()} FleetPass. Todos os direitos reservados.</p>
           <p className="text-xs">Feito no Brasil 🇧🇷 para frotas e postos.</p>
         </div>
       </div>

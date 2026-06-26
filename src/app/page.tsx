@@ -10,26 +10,26 @@ import { CTAFinal } from '@/components/landing/CTAFinal'
 import { Footer } from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
-  title: 'FuelLink — Abastecimento de frota pré-aprovado, sem calote nem contestação',
+  title: 'FleetPass — Abastecimento de frota pré-aprovado, sem calote nem contestação',
   description:
     'Todo abastecimento é pré-aprovado pela transportadora antes de acontecer: o posto recebe com prova registrada e a frota paga só o que autorizou. Fim do abastecimento não reconhecido e do abastecimento fantasma.',
   keywords: [
     'abastecimento de frotas', 'abastecimento pré-aprovado', 'calote em posto',
     'contestação de abastecimento', 'gestão de frotas', 'postos de combustível',
-    'transportadoras', 'requisição de abastecimento', 'contratos digitais', 'FuelLink',
+    'transportadoras', 'requisição de abastecimento', 'contratos digitais', 'FleetPass',
   ],
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    siteName: 'FuelLink',
+    siteName: 'FleetPass',
     title: 'O posto recebe o que abasteceu. A frota paga só o que autorizou.',
     description:
       'Abastecimento pré-aprovado pela transportadora: prova registrada para o posto, zero abastecimento fantasma para a frota.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FuelLink — Abastecimento de frota pré-aprovado',
+    title: 'FleetPass — Abastecimento de frota pré-aprovado',
     description:
       'O posto recebe com prova; a frota paga só o que autorizou. Fim do calote e do abastecimento fantasma.',
   },
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'FuelLink',
+  name: 'FleetPass',
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
   description:

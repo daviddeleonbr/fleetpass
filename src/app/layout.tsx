@@ -6,7 +6,7 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'FuelLink — Marketplace de Abastecimento B2B',
+  title: 'FleetPass — Marketplace de Abastecimento B2B',
   description: 'Conecte sua frota aos melhores postos',
 }
 

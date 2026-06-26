@@ -19,7 +19,7 @@ async function geocode(
   endereco: string, numero: string, bairro: string,
   cidade: string, estado: string, cep: string
 ): Promise<{ lat: number; lng: number } | null> {
-  const headers = { 'User-Agent': 'FuelLink/1.0', 'Accept-Language': 'pt-BR' }
+  const headers = { 'User-Agent': 'FleetPass/1.0', 'Accept-Language': 'pt-BR' }
   const base = 'https://nominatim.openstreetmap.org/search'
 
   const tryUrl = async (url: string) => {

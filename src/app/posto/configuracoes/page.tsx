@@ -211,7 +211,7 @@ export default function ConfiguracoesPage() {
             <>
               <div>
                 <h2 className="text-base font-semibold text-gray-900 mb-1">Plano e cobrança</h2>
-                <p className="text-sm text-gray-400 mb-5">Sua assinatura FuelLink e o histórico de faturas.</p>
+                <p className="text-sm text-gray-400 mb-5">Sua assinatura FleetPass e o histórico de faturas.</p>
 
                 {loadingAssin ? (
                   <div className="flex items-center justify-center gap-2 py-12 text-gray-400">

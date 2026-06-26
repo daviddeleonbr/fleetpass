@@ -67,7 +67,7 @@ export async function exportarPDF({
   // ── Título
   doc.setFontSize(16)
   doc.setFont('helvetica', 'bold')
-  doc.text('FuelLink', 30, 13)
+  doc.text('FleetPass', 30, 13)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(156, 163, 175)
@@ -153,7 +153,7 @@ export async function exportarPDF({
     doc.setFontSize(7)
     doc.setTextColor(148, 163, 184)
     doc.setFont('helvetica', 'normal')
-    doc.text('FuelLink — Relatório Confidencial. Uso interno.', 10, doc.internal.pageSize.getHeight() - 3)
+    doc.text('FleetPass — Relatório Confidencial. Uso interno.', 10, doc.internal.pageSize.getHeight() - 3)
     doc.text(`Página ${i} de ${pageCount}`, W - 10, doc.internal.pageSize.getHeight() - 3, { align: 'right' })
   }
 
@@ -206,7 +206,7 @@ export async function exportarExtrato(cfg: ExtratoEmpresaConfig) {
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.text('FuelLink', 27, 14)
+  doc.text('FleetPass', 27, 14)
   doc.setFontSize(7.5)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(148, 163, 184)
@@ -379,7 +379,7 @@ export async function exportarExtrato(cfg: ExtratoEmpresaConfig) {
     doc.setFontSize(7)
     doc.setTextColor(148, 163, 184)
     doc.setFont('helvetica', 'normal')
-    doc.text('FuelLink — Extrato confidencial. Uso exclusivo para fins de faturamento.', 10, H - 3)
+    doc.text('FleetPass — Extrato confidencial. Uso exclusivo para fins de faturamento.', 10, H - 3)
     doc.text(`Página ${i} de ${pageCount}`, W - 10, H - 3, { align: 'right' })
   }
 

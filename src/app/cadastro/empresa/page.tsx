@@ -188,7 +188,7 @@ export default function CadastroEmpresaPage() {
               <span className="w-10 h-10 bg-petrol-500 rounded-xl flex items-center justify-center shadow-lg shadow-petrol-900/50">
                 <Fuel size={20} className="text-white" />
               </span>
-              <span className="text-xl font-bold text-white tracking-tight">FuelLink</span>
+              <span className="text-xl font-bold text-white tracking-tight">FleetPass</span>
             </Link>
           </motion.div>
 
@@ -258,7 +258,7 @@ export default function CadastroEmpresaPage() {
             <div className="w-8 h-8 bg-petrol-600 rounded-lg flex items-center justify-center">
               <Fuel size={16} className="text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900">FuelLink</span>
+            <span className="text-lg font-bold text-gray-900">FleetPass</span>
           </Link>
 
           {/* Banner de convite do posto */}
@@ -473,7 +473,7 @@ export default function CadastroEmpresaPage() {
                 </div>
                 <h1 className="text-xl font-bold text-gray-900 mb-2">Conta criada!</h1>
                 <p className="text-gray-500 text-sm mb-1">
-                  Bem-vindo ao FuelLink, <strong>{form.nomeCompleto}</strong>!
+                  Bem-vindo ao FleetPass, <strong>{form.nomeCompleto}</strong>!
                 </p>
                 <p className="text-gray-400 text-sm mb-8">
                   <strong>{form.nomeEmpresa}</strong> está pronta para encontrar postos parceiros.
