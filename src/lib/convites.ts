@@ -51,6 +51,11 @@ export async function enviarEmailConvite({ to, postoNome, link, mensagem }: Emai
         html,
       }),
     })
+    if (!res.ok) {
+      // Causa comum: domínio do RESEND_FROM não verificado no Resend.
+      const detalhe = await res.text().catch(() => '')
+      console.error(`[convites] Resend recusou o envio (${res.status}):`, detalhe)
+    }
     return res.ok
   } catch (err) {
     console.error('[convites] falha ao enviar e-mail:', err)
