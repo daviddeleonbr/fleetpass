@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase-server'
-import { maskCpfCnpj } from '@/lib/documento'
 import { gerarTokenConvite, enviarEmailConvite } from '@/lib/convites'
 
 function errorMessage(err: unknown): string {
@@ -69,26 +68,34 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}))
     const postoId = String(body?.postoId ?? '')
-    const email = String(body?.email ?? '').trim()
-    const combustiveis: string[] = Array.isArray(body?.combustiveis) ? body.combustiveis : []
+    const empresaId = String(body?.empresaId ?? '')
     const mensagem = body?.mensagem ? String(body.mensagem) : null
-    const nomeEmpresa = body?.nomeEmpresa ? String(body.nomeEmpresa) : null
     const expiraDias = Number(body?.expiraDias) > 0 ? Number(body.expiraDias) : 14
 
     if (!postoId || !postos.ids.includes(postoId)) {
       return NextResponse.json({ error: 'Selecione um posto válido da sua conta.' }, { status: 400 })
     }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: 'Informe um e-mail válido.' }, { status: 400 })
+    if (!empresaId) {
+      return NextResponse.json({ error: 'Selecione a transportadora a convidar.' }, { status: 400 })
     }
 
-    // Casa o CNPJ (se informado) com uma empresa global já existente
-    const cnpjFormatado = body?.cnpj ? maskCpfCnpj(String(body.cnpj)) : null
-    let empresaId: string | null = null
-    if (cnpjFormatado) {
-      const { data: emp } = await svc.from('empresas').select('id').eq('cnpj', cnpjFormatado).maybeSingle()
-      empresaId = (emp as any)?.id ?? null
-    }
+    // A transportadora precisa já estar cadastrada (entidade global)
+    const { data: empresa } = await svc
+      .from('empresas').select('id, nome_empresa, cnpj, perfil_id').eq('id', empresaId).maybeSingle()
+    if (!empresa) return NextResponse.json({ error: 'Transportadora não encontrada.' }, { status: 404 })
+
+    const { data: perfilEmp } = await svc.from('perfis').select('email').eq('id', empresa.perfil_id).maybeSingle()
+    const email = (perfilEmp as any)?.email ?? ''
+
+    // Guards: evita convidar quem já tem vínculo/negociação com o posto
+    const [{ data: parc }, { data: convPend }, { data: sol }] = await Promise.all([
+      svc.from('parcerias').select('id').eq('posto_id', postoId).eq('empresa_id', empresaId).in('status', ['ativa', 'pendente_assinatura']).maybeSingle(),
+      svc.from('convites').select('id').eq('posto_id', postoId).eq('empresa_id', empresaId).eq('status', 'pendente').maybeSingle(),
+      svc.from('solicitacoes').select('id').eq('posto_id', postoId).eq('empresa_id', empresaId).in('status', ['aguardando', 'proposta_recebida']).maybeSingle(),
+    ])
+    if (parc)     return NextResponse.json({ error: 'Você já tem parceria ativa/pendente com esta transportadora.' }, { status: 409 })
+    if (sol)      return NextResponse.json({ error: 'Já existe uma negociação em andamento com esta transportadora.' }, { status: 409 })
+    if (convPend) return NextResponse.json({ error: 'Já existe um convite pendente para esta transportadora.' }, { status: 409 })
 
     const token = gerarTokenConvite()
     const expiraEm = new Date(Date.now() + expiraDias * 86400000).toISOString()
@@ -98,10 +105,10 @@ export async function POST(req: NextRequest) {
       .insert({
         posto_id:              postoId,
         empresa_id:            empresaId,
-        email_destino:         email,
-        cnpj_destino:          cnpjFormatado,
-        nome_empresa_sugerido: nomeEmpresa,
-        combustiveis,
+        email_destino:         email || `empresa-${empresaId}@sem-email.local`,
+        cnpj_destino:          empresa.cnpj,
+        nome_empresa_sugerido: empresa.nome_empresa,
+        combustiveis:          [],
         mensagem,
         token,
         status:                'pendente',
@@ -112,7 +119,7 @@ export async function POST(req: NextRequest) {
 
     if (insErr) {
       if (String(insErr.code) === '23505') {
-        return NextResponse.json({ error: 'Já existe um convite pendente para este e-mail neste posto.' }, { status: 409 })
+        return NextResponse.json({ error: 'Já existe um convite pendente para esta transportadora.' }, { status: 409 })
       }
       throw insErr
     }
@@ -120,31 +127,27 @@ export async function POST(req: NextRequest) {
     const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     const link = `${origin}/convite/${token}`
 
-    // Notifica a empresa (se já cadastrada) e dispara o e-mail
-    if (empresaId) {
-      try {
-        const { criarNotificacao, perfilDaEmpresa } = await import('@/lib/notificacoes')
-        const destino = await perfilDaEmpresa(svc, empresaId)
-        if (destino) {
-          await criarNotificacao(svc, {
-            perfilId: destino,
-            tipo: 'convite_recebido',
-            titulo: 'Você recebeu um convite de posto',
-            descricao: `${postos.nomes[postoId] ?? 'Um posto'} convidou sua empresa para uma parceria.`,
-            link: '/empresa/convites',
-          })
-        }
-      } catch {}
-    }
+    // Notifica a transportadora (in-app) — ela vê em /empresa/convites
+    try {
+      const { criarNotificacao, perfilDaEmpresa } = await import('@/lib/notificacoes')
+      const destino = await perfilDaEmpresa(svc, empresaId)
+      if (destino) {
+        await criarNotificacao(svc, {
+          perfilId: destino,
+          tipo: 'convite_recebido',
+          titulo: 'Você recebeu um convite de posto',
+          descricao: `${postos.nomes[postoId] ?? 'Um posto'} convidou sua transportadora para uma parceria.`,
+          link: '/empresa/convites',
+        })
+      }
+    } catch {}
 
-    const emailEnviado = await enviarEmailConvite({
-      to: email,
-      postoNome: postos.nomes[postoId] ?? 'Um posto parceiro',
-      link,
-      mensagem,
-    })
+    // E-mail é bônus (não-fatal); a transportadora já vê o convite no painel
+    const emailEnviado = email
+      ? await enviarEmailConvite({ to: email, postoNome: postos.nomes[postoId] ?? 'Um posto parceiro', link, mensagem })
+      : false
 
-    return NextResponse.json({ convite, link, emailEnviado }, { status: 201 })
+    return NextResponse.json({ convite, link, emailEnviado, empresaNome: empresa.nome_empresa }, { status: 201 })
   } catch (err) {
     console.error('[posto/convites POST]', err)
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
