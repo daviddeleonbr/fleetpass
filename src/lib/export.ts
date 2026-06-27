@@ -62,7 +62,7 @@ export async function exportarPDF({
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
-  doc.text('FL', 18, 17, { align: 'center' })
+  doc.text('FP', 18, 17, { align: 'center' })
 
   // ── Título
   doc.setFontSize(16)
@@ -201,7 +201,7 @@ export async function exportarExtrato(cfg: ExtratoEmpresaConfig) {
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
-  doc.text('FL', 17, 17, { align: 'center' })
+  doc.text('FP', 17, 17, { align: 'center' })
 
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(14)

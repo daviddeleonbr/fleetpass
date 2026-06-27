@@ -24,7 +24,7 @@ export async function enviarEmailConvite({ to, postoNome, link, mensagem }: Emai
   const html = `
   <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0f172a">
     <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:20px">
-      <div style="width:32px;height:32px;border-radius:8px;background:#0e8285;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700">FL</div>
+      <div style="width:32px;height:32px;border-radius:8px;background:#0e8285;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700">FP</div>
       <span style="font-size:18px;font-weight:700">FleetPass</span>
     </div>
     <h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(postoNome)} convidou você para o FleetPass</h1>
