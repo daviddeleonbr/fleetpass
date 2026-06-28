@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-auth'
 
 const GROUPS = {
   asaas: [
@@ -25,6 +26,8 @@ function mapVars(vars: { key: string; label: string }[]) {
 }
 
 export async function GET() {
+  const a = await requireAdmin()
+  if (!a.ok) return a.response
   return NextResponse.json({
     asaas:    mapVars(GROUPS.asaas),
     supabase: mapVars(GROUPS.supabase),

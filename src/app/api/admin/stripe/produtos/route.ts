@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { requireAdmin } from '@/lib/admin-auth'
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY
@@ -11,6 +12,8 @@ function getStripe() {
 // GET — Lista produtos ativos com seus preços
 // ---------------------------------------------------------------------------
 export async function GET() {
+  const a = await requireAdmin()
+  if (!a.ok) return a.response
   try {
     const stripe = getStripe()
 
@@ -57,6 +60,8 @@ export async function GET() {
 // POST — Cadastra novo produto + preço no Stripe
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
+  const a = await requireAdmin()
+  if (!a.ok) return a.response
   try {
     const stripe = getStripe()
 
@@ -119,6 +124,8 @@ export async function POST(req: NextRequest) {
 // PATCH — Atualiza o preço de um produto (arquiva o antigo, cria novo)
 // ---------------------------------------------------------------------------
 export async function PATCH(req: NextRequest) {
+  const a = await requireAdmin()
+  if (!a.ok) return a.response
   try {
     const stripe = getStripe()
 
@@ -177,6 +184,8 @@ export async function PATCH(req: NextRequest) {
 // DELETE — Arquiva um produto (e seus preços) no Stripe
 // ---------------------------------------------------------------------------
 export async function DELETE(req: NextRequest) {
+  const a = await requireAdmin()
+  if (!a.ok) return a.response
   try {
     const stripe = getStripe()
 
