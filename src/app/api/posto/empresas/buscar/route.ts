@@ -53,14 +53,12 @@ export async function GET(req: NextRequest) {
     const status: Record<string, string> = {}
     if (postoId) {
       const ids = lista.map((e) => e.id)
-      const [{ data: parc }, { data: conv }, { data: sol }] = await Promise.all([
+      const [{ data: parc }, { data: sol }] = await Promise.all([
         svc.from('parcerias').select('empresa_id').eq('posto_id', postoId).in('empresa_id', ids).in('status', ['ativa', 'pendente_assinatura']),
-        svc.from('convites').select('empresa_id').eq('posto_id', postoId).in('empresa_id', ids).eq('status', 'pendente'),
-        svc.from('solicitacoes').select('empresa_id').eq('posto_id', postoId).in('empresa_id', ids).in('status', ['aguardando', 'proposta_recebida']),
+        svc.from('solicitacoes').select('empresa_id').eq('posto_id', postoId).in('empresa_id', ids).in('status', ['aguardando', 'proposta_recebida', 'em_negociacao']),
       ])
       for (const p of parc ?? []) status[p.empresa_id] = 'parceria'
       for (const s of sol ?? []) if (!status[s.empresa_id]) status[s.empresa_id] = 'negociacao'
-      for (const c of conv ?? []) if (!status[c.empresa_id]) status[c.empresa_id] = 'convite'
     }
 
     return NextResponse.json({

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body inválido.' }, { status: 400 })
   }
 
-  const { nomeCompleto, email, senha, telefone, cargo, nomeEmpresa, cnpj, segmento, cidade, estado, conviteToken } = body
+  const { nomeCompleto, email, senha, telefone, cargo, nomeEmpresa, cnpj, segmento, cidade, estado } = body
 
   if (!nomeCompleto || !email || !senha || !nomeEmpresa || !cnpj) {
     return NextResponse.json(
@@ -82,39 +82,10 @@ export async function POST(req: NextRequest) {
     await supabase.auth.admin.deleteUser(userId)
 
     if (empresaError?.message?.includes('unique') && empresaError.message?.includes('cnpj')) {
-      // CNPJ global já existe: no contexto de convite, orientar a logar e aceitar pela tela própria.
-      return NextResponse.json(
-        { error: 'Este CNPJ já está cadastrado. Faça login e aceite o convite em "Convites".' },
-        { status: 409 },
-      )
+      return NextResponse.json({ error: 'Este CNPJ já está cadastrado. Faça login na sua conta.' }, { status: 409 })
     }
     return NextResponse.json({ error: empresaError?.message ?? 'Erro ao criar empresa.' }, { status: 400 })
   }
 
-  // 3. Se veio de um convite, ancora a solicitação (origem='posto'). Não-fatal:
-  //    a empresa já foi criada; em falha, o convite fica para aceite manual em /empresa/convites.
-  let conviteAceito = false
-  if (conviteToken) {
-    try {
-      const { data: convite } = await (supabase as any)
-        .from('convites')
-        .select('id, status, expira_em')
-        .eq('token', conviteToken)
-        .maybeSingle()
-      const c = convite as { id: string; status: string; expira_em: string | null } | null
-      const expirado = c?.expira_em ? new Date(c.expira_em) < new Date() : false
-      if (c && c.status === 'pendente' && !expirado) {
-        const { error: rpcErr } = await (supabase as any).rpc('aceitar_convite', {
-          p_convite_id: c.id,
-          p_empresa_id: novaEmpresa.id,
-        })
-        conviteAceito = !rpcErr
-        if (rpcErr) console.error('[cadastro/empresa] aceitar_convite falhou:', rpcErr)
-      }
-    } catch (err) {
-      console.error('[cadastro/empresa] erro ao processar convite:', err)
-    }
-  }
-
-  return NextResponse.json({ userId, email, conviteAceito }, { status: 201 })
+  return NextResponse.json({ userId, email }, { status: 201 })
 }

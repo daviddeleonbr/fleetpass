@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Plus, X, MapPin, Check, AlertCircle, Store, Loader2, FileSignature, MessageCircle, Mail } from 'lucide-react'
+import { FileText, Plus, X, MapPin, Check, AlertCircle, Store, Loader2, FileSignature, MessageCircle } from 'lucide-react'
 import { NegociacaoPainel } from '@/components/parcerias/negociacao-painel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -231,9 +231,6 @@ export default function ParceriasPage() {
             <h1 className="text-2xl font-bold text-gray-900">Parcerias</h1>
             <p className="text-gray-500 text-sm">Gerencie suas parcerias com postos de combustível.</p>
           </div>
-          <Link href="/empresa/convites">
-            <Button size="sm"><Mail size={14} /> Ver convites</Button>
-          </Link>
         </div>
         <div className="flex flex-col items-center gap-3 py-16 text-gray-400">
           <Loader2 size={28} className="animate-spin" />
@@ -251,9 +248,6 @@ export default function ParceriasPage() {
             <h1 className="text-2xl font-bold text-gray-900">Parcerias</h1>
             <p className="text-gray-500 text-sm">Gerencie suas parcerias com postos de combustível.</p>
           </div>
-          <Link href="/empresa/convites">
-            <Button size="sm"><Mail size={14} /> Ver convites</Button>
-          </Link>
         </div>
         <div className="text-center py-12 text-gray-400">
           <p className="text-sm">{error}</p>
@@ -270,9 +264,6 @@ export default function ParceriasPage() {
           <h1 className="text-2xl font-bold text-gray-900">Parcerias</h1>
           <p className="text-gray-500 text-sm">Gerencie suas parcerias com postos de combustível.</p>
         </div>
-        <Link href="/empresa/convites">
-          <Button size="sm"><Mail size={14} /> Ver convites</Button>
-        </Link>
       </div>
 
       {/* Banner de contratos aguardando assinatura */}

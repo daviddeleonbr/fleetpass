@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -69,29 +69,6 @@ export default function CadastroEmpresaPage() {
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }))
 
-  // Convite do posto (link público /convite/[token] ou ?convite=token)
-  const [conviteToken, setConviteToken] = useState<string | null>(null)
-  const [convite, setConvite] = useState<{ posto: string; jaCadastrada: boolean } | null>(null)
-
-  useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get('convite')
-    if (!token) return
-    setConviteToken(token)
-    fetch(`/api/convites/${token}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d || d.error) return
-        setConvite({ posto: d.posto ?? 'um posto', jaCadastrada: !!d.jaCadastrada })
-        setForm((f) => ({
-          ...f,
-          email:       f.email       || d.email       || '',
-          cnpj:        f.cnpj        || d.cnpj         || '',
-          nomeEmpresa: f.nomeEmpresa || d.nomeEmpresa  || '',
-        }))
-      })
-      .catch(() => {})
-  }, [])
-
   const senhaError = form.confirmarSenha && form.confirmarSenha !== form.senha
     ? 'As senhas não coincidem'
     : undefined
@@ -124,7 +101,6 @@ export default function CadastroEmpresaPage() {
           segmento:     form.segmento,
           cidade:       form.cidade,
           estado:       form.estado,
-          conviteToken: conviteToken ?? undefined,
         }),
       })
       const data = await res.json()
@@ -139,12 +115,6 @@ export default function CadastroEmpresaPage() {
       })
       if (loginError) {
         router.push('/login?cadastro=ok')
-        return
-      }
-
-      // Veio de convite: vai direto negociar a parceria recém-criada
-      if (conviteToken) {
-        router.push('/empresa/parcerias')
         return
       }
 
@@ -260,22 +230,6 @@ export default function CadastroEmpresaPage() {
             </div>
             <span className="text-lg font-bold text-gray-900">FleetPass</span>
           </Link>
-
-          {/* Banner de convite do posto */}
-          {convite && (
-            <div className="mb-5 rounded-xl border border-petrol-200 bg-petrol-50 p-3.5">
-              {convite.jaCadastrada ? (
-                <p className="text-sm text-petrol-800">
-                  <strong>{convite.posto}</strong> convidou sua empresa, mas este CNPJ já possui conta.{' '}
-                  <Link href="/login" className="font-semibold text-petrol-700 underline">Faça login</Link> e aceite em “Convites”.
-                </p>
-              ) : (
-                <p className="text-sm text-petrol-800">
-                  <strong>{convite.posto}</strong> convidou sua transportadora. Conclua o cadastro para iniciar a parceria.
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Progress */}
           {step < 3 && (

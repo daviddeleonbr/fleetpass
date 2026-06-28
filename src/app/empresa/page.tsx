@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { TrendingUp, TrendingDown, Plus, Truck, Mail, CheckCircle2, Handshake, Clock, FilePlus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Plus, Truck, CheckCircle2, Handshake, Clock, FilePlus } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -129,9 +129,9 @@ export default function EmpresaPage() {
             <Truck size={14} /> Cadastrar veículo
           </Button>
         </Link>
-        <Link href="/empresa/convites">
+        <Link href="/empresa/parcerias">
           <Button variant="secondary" size="sm">
-            <Mail size={14} /> Convites
+            <Handshake size={14} /> Parcerias
           </Button>
         </Link>
       </div>

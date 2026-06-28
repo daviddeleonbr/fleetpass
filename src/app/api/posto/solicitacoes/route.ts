@@ -1,5 +1,68 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase-server'
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === 'object') {
+    const e = err as { message?: string; details?: string; hint?: string }
+    return [e.message, e.details, e.hint].filter(Boolean).join(' · ') || 'Erro no banco.'
+  }
+  return String(err)
+}
+
+// POST — o POSTO inicia a solicitação (origem='posto') para uma transportadora
+// já cadastrada. Em seguida o posto envia a proposta (fluxo existente).
+export async function POST(req: NextRequest) {
+  try {
+    const authClient = await createClient()
+    const { data: { user }, error: userError } = await authClient.auth.getUser()
+    if (userError || !user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+
+    const svc = createServiceClient() as any
+    const { data: conta } = await svc.from('contas_posto').select('id').eq('perfil_id', user.id).single()
+    if (!conta) return NextResponse.json({ error: 'Conta de posto não encontrada.' }, { status: 404 })
+
+    const body = await req.json().catch(() => ({}))
+    const postoId = String(body?.postoId ?? '')
+    const empresaId = String(body?.empresaId ?? '')
+    if (!postoId || !empresaId) return NextResponse.json({ error: 'postoId e empresaId obrigatórios.' }, { status: 400 })
+
+    // posto pertence à conta (anti-IDOR)
+    const { data: posto } = await svc.from('postos').select('id, combustiveis').eq('id', postoId).eq('conta_posto_id', conta.id).maybeSingle()
+    if (!posto) return NextResponse.json({ error: 'Posto inválido.' }, { status: 403 })
+
+    // transportadora precisa já estar cadastrada
+    const { data: empresa } = await svc.from('empresas').select('id').eq('id', empresaId).maybeSingle()
+    if (!empresa) return NextResponse.json({ error: 'Transportadora não encontrada.' }, { status: 404 })
+
+    // Guards: já há vínculo/negociação com esse posto?
+    const [{ data: parc }, { data: solAtiva }] = await Promise.all([
+      svc.from('parcerias').select('id').eq('posto_id', postoId).eq('empresa_id', empresaId).in('status', ['ativa', 'pendente_assinatura']).maybeSingle(),
+      svc.from('solicitacoes').select('id').eq('posto_id', postoId).eq('empresa_id', empresaId).in('status', ['aguardando', 'proposta_recebida', 'em_negociacao']).maybeSingle(),
+    ])
+    if (parc)     return NextResponse.json({ error: 'Você já tem parceria ativa/pendente com esta transportadora.' }, { status: 409 })
+    if (solAtiva) return NextResponse.json({ error: 'Já existe uma negociação em andamento com esta transportadora.' }, { status: 409 })
+
+    // Combustíveis da solicitação = os do posto (para o form de proposta listar);
+    // fallback para os padrões quando o posto ainda não definiu nenhum.
+    const COMB_PADRAO = ['Gasolina Comum', 'Gasolina Aditivada', 'Etanol', 'Diesel Comum', 'Diesel S-10']
+    const combustiveis = (posto.combustiveis?.length ? posto.combustiveis : COMB_PADRAO)
+
+    const { data: nova, error } = await svc.from('solicitacoes').insert({
+      empresa_id:   empresaId,
+      posto_id:     postoId,
+      combustiveis,
+      status:       'aguardando',
+      origem:       'posto',
+    }).select('id').single()
+    if (error) throw error
+
+    return NextResponse.json({ solicitacaoId: nova.id }, { status: 201 })
+  } catch (err) {
+    console.error('[posto/solicitacoes POST]', err)
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
+  }
+}
 
 export async function GET() {
   try {

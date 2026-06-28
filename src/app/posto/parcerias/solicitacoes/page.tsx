@@ -184,6 +184,8 @@ export default function SolicitacoesPage() {
   const [motivoRejeicao, setMotivoRejeicao] = useState('')
   const [motivoOutro, setMotivoOutro] = useState('')
   const [rejeitando, setRejeitando] = useState(false)
+  // Auto-abre o form de proposta quando vier de Clientes (?proposta=<solicitacaoId>)
+  const [abrirPropostaId, setAbrirPropostaId] = useState<string | null>(null)
 
   const fetchSolicitacoes = useCallback(async () => {
     setLoading(true)
@@ -206,6 +208,22 @@ export default function SolicitacoesPage() {
   useEffect(() => {
     fetchSolicitacoes()
   }, [fetchSolicitacoes])
+
+  // Lê ?proposta=<id> uma vez (vindo de Clientes > Convidar)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('proposta')
+    if (p) { setTab('novas'); setAbrirPropostaId(p) }
+  }, [])
+
+  // Quando a solicitação carregar na aba "novas", abre o form de proposta
+  useEffect(() => {
+    if (abrirPropostaId && novas.some((s) => s.id === abrirPropostaId)) {
+      abrirPropostaModal(abrirPropostaId)
+      setAbrirPropostaId(null)
+      window.history.replaceState(null, '', '/posto/parcerias/solicitacoes')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abrirPropostaId, novas])
 
   const solicitacaoSelecionada =
     novas.find((s) => s.id === propostaModal) ??
