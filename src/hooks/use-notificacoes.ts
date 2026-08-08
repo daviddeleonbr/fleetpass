@@ -28,7 +28,8 @@ export function useNotificacoes() {
 
   useEffect(() => {
     refresh()
-    const id = setInterval(refresh, 30000)
+    // Polling leve (2 min) + refetch ao focar a aba — evita carga ociosa a cada 30s.
+    const id = setInterval(refresh, 120000)
     const onFocus = () => refresh()
     window.addEventListener('focus', onFocus)
     return () => {

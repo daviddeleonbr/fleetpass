@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useNotificacoes } from '@/hooks/use-notificacoes'
-import { usePerfilAtual } from '@/hooks/use-perfil-atual'
+import { usePerfilAtual, limparPerfilAtual } from '@/hooks/use-perfil-atual'
 
 interface TopbarProps {
   breadcrumb?: { label: string; href?: string }[]
@@ -43,6 +43,7 @@ export function Topbar({ breadcrumb = [] }: TopbarProps) {
 
   async function handleLogout() {
     await supabase.auth.signOut()
+    limparPerfilAtual()
     router.push('/login')
   }
 

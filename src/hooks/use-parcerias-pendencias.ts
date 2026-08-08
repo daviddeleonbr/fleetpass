@@ -29,7 +29,8 @@ export function useParceriasPendencias(): PendenciasParcerias {
       } catch {}
     }
     tick()
-    const id = setInterval(tick, 30000)
+    // Polling leve (2 min) + refetch ao focar a aba — evita carga ociosa a cada 30s.
+    const id = setInterval(tick, 120000)
     const onFocus = () => tick()
     window.addEventListener('focus', onFocus)
     return () => {

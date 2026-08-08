@@ -25,6 +25,20 @@ const ROLE_HOME: Record<string, string> = {
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Estáticos e rotas de API não precisam de refresh de sessão aqui: as rotas de
+  // API fazem sua própria validação de auth e estáticos são públicos. Retornar
+  // antes evita um getUser() de rede (ao Supabase Auth) desperdiçado em TODA
+  // chamada /api — que antes acontecia porque o getUser rodava antes deste check.
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -54,17 +68,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
-
-  // Skip static files and API routes
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.')
-  ) {
-    return supabaseResponse
-  }
 
   const isPublic = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/'),

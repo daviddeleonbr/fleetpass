@@ -31,41 +31,36 @@ export async function GET(req: NextRequest) {
       .in('posto_id', postoIds)
       .order('nome')
 
-    // Busca validações com joins
+    // Busca validações — filtra por tenant NO BANCO via requisicoes!inner
+    // (antes trazia TODAS as validações da plataforma e filtrava em memória).
     let query = svc
       .from('validacoes')
       .select(`
         id, data_hora, litros, valor_cobrado, valor_unitario, observacao,
         frentista_id,
         frentistas ( id, nome ),
-        requisicoes (
-          id, codigo, combustivel,
+        requisicoes!inner (
+          id, codigo, combustivel, posto_id,
           empresas ( nome_empresa ),
           motoristas ( nome ),
           veiculos ( placa, modelo ),
           postos ( id, nome )
         )
       `)
+      .in('requisicoes.posto_id', postoIds)
       .order('data_hora', { ascending: false })
+      .limit(1000)
 
     if (inicio) query = query.gte('data_hora', `${inicio}T00:00:00`)
     if (fim) query = query.lte('data_hora', `${fim}T23:59:59`)
     if (frentistaId && frentistaId !== 'todos') query = query.eq('frentista_id', frentistaId)
+    if (postoId && postoId !== 'todos') query = query.eq('requisicoes.posto_id', postoId)
 
     const { data: validacoes, error: valError } = await query
 
     if (valError) throw valError
 
-    // Filtra apenas validações de postos do usuário
-    const filteredPostoId = postoId && postoId !== 'todos' ? postoId : null
     const liberacoes = (validacoes ?? [])
-      .filter(v => {
-        const req = v.requisicoes as any
-        const pId = req?.postos?.id
-        if (!pId || !postoIds.includes(pId)) return false
-        if (filteredPostoId && pId !== filteredPostoId) return false
-        return true
-      })
       .map(v => {
         const req = v.requisicoes as any
         const frentista = v.frentistas as any
