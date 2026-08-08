@@ -21,33 +21,26 @@ export async function GET() {
       .maybeSingle()
 
     if (empresa) {
-      // Solicitações com proposta nova (não vista) ou em negociação ativa
-      const { data: sols } = await svc
-        .from('solicitacoes')
-        .select('id, status')
-        .eq('empresa_id', empresa.id)
-        .in('status', ['proposta_recebida', 'em_negociacao'])
+      // sols (precisa dos ids p/ msgs) e contratos a assinar são independentes → paralelo
+      const [{ data: sols }, { data: assinar }] = await Promise.all([
+        svc.from('solicitacoes').select('id, status')
+          .eq('empresa_id', empresa.id).in('status', ['proposta_recebida', 'em_negociacao']),
+        svc.from('parcerias').select('id, contratos!inner(assinado_empresa_em)')
+          .eq('empresa_id', empresa.id).eq('status', 'pendente_assinatura').is('contratos.assinado_empresa_em', null),
+      ])
 
       const propostasParaRevisar = sols?.length ?? 0
 
       let msgsNaoLidas = 0
       if (sols && sols.length > 0) {
-        const { data: msgs } = await (svc as any)
+        const { count } = await (svc as any)
           .from('parceria_mensagens')
-          .select('id')
-          .in('solicitacao_id', sols.map(s => s.id))
+          .select('id', { count: 'exact', head: true })
+          .in('solicitacao_id', sols.map((s: { id: string }) => s.id))
           .eq('autor_tipo', 'posto')
           .is('lida_em', null)
-        msgsNaoLidas = msgs?.length ?? 0
+        msgsNaoLidas = count ?? 0
       }
-
-      // Contratos aguardando assinatura da empresa
-      const { data: assinar } = await svc
-        .from('parcerias')
-        .select('id, contratos!inner(assinado_empresa_em)')
-        .eq('empresa_id', empresa.id)
-        .eq('status', 'pendente_assinatura')
-        .is('contratos.assinado_empresa_em', null)
 
       const contratosPend = assinar?.length ?? 0
 
@@ -76,49 +69,33 @@ export async function GET() {
 
       if (postoIds.length === 0) return NextResponse.json({ total: 0 })
 
-      // Novas solicitações aguardando análise
-      const { data: novas } = await svc
-        .from('solicitacoes')
-        .select('id')
-        .in('posto_id', postoIds)
-        .eq('status', 'aguardando')
-
-      // Solicitações em negociação ativa (badge permanente enquanto não for aceita/rejeitada)
-      const { data: negociando } = await svc
-        .from('solicitacoes')
-        .select('id')
-        .in('posto_id', postoIds)
-        .eq('status', 'em_negociacao')
-
-      // Solicitações com proposta enviada (pra checar msgs da empresa)
-      const { data: sols } = await svc
-        .from('solicitacoes')
-        .select('id')
-        .in('posto_id', postoIds)
-        .in('status', ['proposta_recebida', 'em_negociacao'])
+      // Contadores independentes em paralelo (novas/negociando via count; sols precisa dos ids)
+      const [
+        { count: novasCountRaw },
+        { count: negociandoCountRaw },
+        { data: sols },
+        { data: assinar },
+      ] = await Promise.all([
+        svc.from('solicitacoes').select('id', { count: 'exact', head: true }).in('posto_id', postoIds).eq('status', 'aguardando'),
+        svc.from('solicitacoes').select('id', { count: 'exact', head: true }).in('posto_id', postoIds).eq('status', 'em_negociacao'),
+        svc.from('solicitacoes').select('id').in('posto_id', postoIds).in('status', ['proposta_recebida', 'em_negociacao']),
+        svc.from('parcerias').select('id, contratos!inner(assinado_posto_em)').in('posto_id', postoIds).eq('status', 'pendente_assinatura').is('contratos.assinado_posto_em', null),
+      ])
 
       let msgsNaoLidas = 0
       if (sols && sols.length > 0) {
-        const { data: msgs } = await (svc as any)
+        const { count } = await (svc as any)
           .from('parceria_mensagens')
-          .select('id')
-          .in('solicitacao_id', sols.map(s => s.id))
+          .select('id', { count: 'exact', head: true })
+          .in('solicitacao_id', sols.map((s: { id: string }) => s.id))
           .eq('autor_tipo', 'empresa')
           .is('lida_em', null)
-        msgsNaoLidas = msgs?.length ?? 0
+        msgsNaoLidas = count ?? 0
       }
 
-      // Contratos aguardando assinatura do posto
-      const { data: assinar } = await svc
-        .from('parcerias')
-        .select('id, contratos!inner(assinado_posto_em)')
-        .in('posto_id', postoIds)
-        .eq('status', 'pendente_assinatura')
-        .is('contratos.assinado_posto_em', null)
-
-      const novasCount       = novas?.length ?? 0
-      const negociandoCount  = negociando?.length ?? 0
-      const contratosPend    = assinar?.length ?? 0
+      const novasCount      = novasCountRaw ?? 0
+      const negociandoCount = negociandoCountRaw ?? 0
+      const contratosPend   = assinar?.length ?? 0
 
       return NextResponse.json({
         role: 'posto',

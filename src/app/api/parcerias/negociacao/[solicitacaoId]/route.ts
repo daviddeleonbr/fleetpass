@@ -52,29 +52,21 @@ export async function GET(
   const ctx = await resolverContexto(svc, user.id, solicitacaoId)
   if (!ctx) return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 })
 
-  // Solicitação + todas as propostas (ordenadas por versão)
-  const { data: solicitacao } = await svc
-    .from('solicitacoes')
-    .select(`
+  // Solicitação + propostas + mensagens em paralelo (antes: 3 round-trips seriais)
+  const [
+    { data: solicitacao },
+    { data: propostas },
+    { data: mensagens },
+  ] = await Promise.all([
+    svc.from('solicitacoes').select(`
       id, status, mensagem, combustiveis, volume_estimado, valor_estimado,
       empresa_id, posto_id,
       empresas ( nome_empresa ),
       postos   ( nome )
-    `)
-    .eq('id', solicitacaoId)
-    .single()
-
-  const { data: propostas } = await svc
-    .from('propostas')
-    .select('*')
-    .eq('solicitacao_id', solicitacaoId)
-    .order('versao', { ascending: false })
-
-  const { data: mensagens } = await svc
-    .from('parceria_mensagens' as any)
-    .select('*')
-    .eq('solicitacao_id', solicitacaoId)
-    .order('created_at', { ascending: true })
+    `).eq('id', solicitacaoId).single(),
+    svc.from('propostas').select('*').eq('solicitacao_id', solicitacaoId).order('versao', { ascending: false }),
+    svc.from('parceria_mensagens' as any).select('*').eq('solicitacao_id', solicitacaoId).order('created_at', { ascending: true }),
+  ])
 
   // Marca como lidas as mensagens da contraparte
   const naoLidas = ((mensagens ?? []) as any[])

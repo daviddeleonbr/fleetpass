@@ -57,43 +57,56 @@ export async function GET() {
     const postoIds = postos.map((p) => p.id)
     const postoMap = Object.fromEntries(postos.map((p) => [p.id, p.nome]))
 
-    // Get active/suspended parcerias
-    const { data: parcerias, error } = await svc
-      .from('parcerias')
-      .select(`
+    // Parcerias ativas/suspensas e pendentes de assinatura — em paralelo
+    const [
+      { data: parcerias, error },
+      { data: pendAssRaw },
+    ] = await Promise.all([
+      svc.from('parcerias').select(`
         id, posto_id, empresa_id, status, iniciada_em,
         combustiveis, ciclo_tipo, ciclo_prazo_recebimento, limite_credito,
-        empresas (
-          nome_empresa, cnpj, cidade, estado
-        )
-      `)
-      .in('posto_id', postoIds)
-      .in('status', ['ativa', 'suspensa'])
-      .order('iniciada_em', { ascending: false })
-
+        empresas ( nome_empresa, cnpj, cidade, estado )
+      `).in('posto_id', postoIds).in('status', ['ativa', 'suspensa']).order('iniciada_em', { ascending: false }),
+      svc.from('parcerias').select(`
+        id, posto_id, empresa_id, iniciada_em, combustiveis,
+        empresas(nome_empresa, cnpj, cidade, estado),
+        contratos(assinado_empresa_em, assinado_posto_em)
+      `).in('posto_id', postoIds)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .eq('status', 'pendente_assinatura' as any).order('iniciada_em', { ascending: false }),
+    ])
     if (error) throw error
 
-    // For each parceria, sum abastecimentos in current cycle
-    const enriched = await Promise.all((parcerias ?? []).map(async (pa) => {
-      const cycleStart = getCycleStart(pa.ciclo_tipo)
-      const { data: agg } = await svc
+    const parceriaList = parcerias ?? []
+    const parceriaIds = parceriaList.map((p) => p.id)
+    const cycleStartById: Record<string, string> = Object.fromEntries(
+      parceriaList.map((p) => [p.id, getCycleStart(p.ciclo_tipo)]),
+    )
+
+    // UMA query de abastecimentos para todas as parcerias (antes: 1 por parceria = N+1),
+    // limitada ao início de ciclo mais antigo; o corte por ciclo de cada parceria é em memória.
+    const creditoPorParceria: Record<string, number> = {}
+    if (parceriaIds.length) {
+      const earliest = Object.values(cycleStartById).reduce((a, b) => (a < b ? a : b))
+      const { data: abast } = await svc
         .from('abastecimentos')
-        .select('valor')
-        .eq('parceria_id', pa.id)
-        .gte('data', cycleStart)
+        .select('parceria_id, valor, data')
+        .in('parceria_id', parceriaIds)
+        .gte('data', earliest)
+      for (const a of (abast ?? []) as Array<{ parceria_id: string; valor: number; data: string }>) {
+        const cs = cycleStartById[a.parceria_id]
+        if (cs && new Date(a.data).getTime() >= new Date(cs).getTime()) {
+          creditoPorParceria[a.parceria_id] = (creditoPorParceria[a.parceria_id] ?? 0) + (Number(a.valor) || 0)
+        }
+      }
+    }
 
-      const creditoUsado = (agg ?? []).reduce((sum, a) => sum + (Number(a.valor) || 0), 0)
-
-      // Extract combustivel names from jsonb
+    const enriched = parceriaList.map((pa) => {
       const combustiveis: string[] = Array.isArray(pa.combustiveis)
         ? (pa.combustiveis as Array<{ tipo?: string; ativo?: boolean }>)
-            .filter((c) => c.ativo !== false)
-            .map((c) => c.tipo ?? '')
-            .filter(Boolean)
+            .filter((c) => c.ativo !== false).map((c) => c.tipo ?? '').filter(Boolean)
         : []
-
       const empresa = pa.empresas as { nome_empresa: string; cnpj: string; cidade: string; estado: string } | null
-
       return {
         id: pa.id,
         posto: postoMap[pa.posto_id] ?? '',
@@ -104,25 +117,12 @@ export async function GET() {
         desde: new Date(pa.iniciada_em).toLocaleDateString('pt-BR'),
         combustiveis,
         limiteValor: pa.limite_credito != null ? Number(pa.limite_credito) : null,
-        creditoUsado,
+        creditoUsado: creditoPorParceria[pa.id] ?? 0,
         ciclo: `${capitalCiclo(pa.ciclo_tipo)} · +${pa.ciclo_prazo_recebimento}d`,
         status: pa.status,
         bloqueadoManual: pa.status === 'suspensa',
       }
-    }))
-
-    // Parcerias aguardando assinatura
-    const { data: pendAssRaw } = await svc
-      .from('parcerias')
-      .select(`
-        id, posto_id, empresa_id, iniciada_em, combustiveis,
-        empresas(nome_empresa, cnpj, cidade, estado),
-        contratos(assinado_empresa_em, assinado_posto_em)
-      `)
-      .in('posto_id', postoIds)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .eq('status', 'pendente_assinatura' as any)
-      .order('iniciada_em', { ascending: false })
+    })
 
     const pendentesAssinatura = (pendAssRaw ?? []).map((pa) => {
       const empresa = pa.empresas as { nome_empresa: string; cnpj: string; cidade: string; estado: string } | null

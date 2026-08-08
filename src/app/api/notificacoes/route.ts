@@ -9,18 +9,13 @@ export async function GET() {
     if (!user) return NextResponse.json({ items: [], naoLidas: 0 })
 
     const svc = createServiceClient()
-    const { data: items } = await (svc as any)
-      .from('notificacoes')
-      .select('*')
-      .eq('perfil_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    const { count } = await (svc as any)
-      .from('notificacoes')
-      .select('id', { count: 'exact', head: true })
-      .eq('perfil_id', user.id)
-      .is('lida_em', null)
+    // Lista + contador de não lidas em paralelo
+    const [{ data: items }, { count }] = await Promise.all([
+      (svc as any).from('notificacoes').select('*')
+        .eq('perfil_id', user.id).order('created_at', { ascending: false }).limit(20),
+      (svc as any).from('notificacoes').select('id', { count: 'exact', head: true })
+        .eq('perfil_id', user.id).is('lida_em', null),
+    ])
 
     return NextResponse.json({ items: items ?? [], naoLidas: count ?? 0 })
   } catch (err) {

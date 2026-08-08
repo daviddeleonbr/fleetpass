@@ -65,20 +65,23 @@ export async function GET(req: NextRequest) {
     const totalAbastecimentos = abastecimentos.length
     const postosUnicos       = new Set(abastecimentos.map((a: any) => a.postoId).filter(Boolean)).size
 
-    // Opções de filtro disponíveis no período (sem aplicar filtros de posto/veiculo/motorista)
-    // para popular os <select> — buscamos todos do mês sem filtros extras
-    const { data: todos } = await svcAny
-      .from('abastecimentos')
-      .select('veiculos(id, placa, modelo), motoristas(id, nome), postos(id, nome)')
-      .eq('empresa_id', empresa.id)
-      .gte('data', inicio)
-      .lt('data', fim)
+    // Opções para os <select>: quando NÃO há filtro aplicado, `data` já é o mês
+    // completo → reaproveita e evita a 2ª varredura. Só relê quando há filtro.
+    const temFiltro = !!(postoId || veiculoId || motoristaId)
+    let fonteOpcoes: any[] = data ?? []
+    if (temFiltro) {
+      const { data: todos } = await svcAny
+        .from('abastecimentos')
+        .select('veiculos(id, placa, modelo), motoristas(id, nome), postos(id, nome)')
+        .eq('empresa_id', empresa.id).gte('data', inicio).lt('data', fim)
+      fonteOpcoes = todos ?? []
+    }
 
     const postoMap    = new Map<string, string>()
     const veiculoMap  = new Map<string, string>()
     const motoristaMap = new Map<string, string>()
 
-    for (const a of (todos ?? [])) {
+    for (const a of fonteOpcoes) {
       const v = a.veiculos   as { id: string; placa: string; modelo: string } | null
       const m = a.motoristas as { id: string; nome: string } | null
       const p = a.postos     as { id: string; nome: string } | null

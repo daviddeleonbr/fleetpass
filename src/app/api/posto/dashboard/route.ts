@@ -46,39 +46,27 @@ export async function GET(req: NextRequest) {
     const mesAtualInicio = periodos[0].inicio
     const mesAtualFim    = periodos[0].fim
 
-    const { data: abastMes } = await svc
-      .from('abastecimentos')
-      .select('valor')
-      .in('posto_id', postoIds)
-      .gte('data', mesAtualInicio)
-      .lte('data', mesAtualFim + 'T23:59:59')
+    // Métricas + solicitações pendentes em paralelo (antes: 4 round-trips seriais)
+    const [
+      { data: abastMes },
+      { count: solPendentes },
+      { count: parceiros },
+      { data: solicitacoesRaw },
+    ] = await Promise.all([
+      svc.from('abastecimentos').select('valor')
+        .in('posto_id', postoIds).gte('data', mesAtualInicio).lte('data', mesAtualFim + 'T23:59:59'),
+      svc.from('solicitacoes').select('id', { count: 'exact', head: true })
+        .in('posto_id', postoIds).eq('status', 'aguardando'),
+      svc.from('parcerias').select('id', { count: 'exact', head: true })
+        .in('posto_id', postoIds).eq('status', 'ativa'),
+      svc.from('solicitacoes').select(`
+        id, combustiveis, volume_estimado, valor_estimado, mensagem, posto_id,
+        empresas ( nome_empresa, cnpj, cidade, estado )
+      `).in('posto_id', postoIds).eq('status', 'aguardando').order('created_at', { ascending: false }).limit(10),
+    ])
 
     const abastecimentosMes = abastMes?.length ?? 0
     const receitaB2B = (abastMes ?? []).reduce((s, a) => s + Number(a.valor), 0)
-
-    const { count: solPendentes } = await svc
-      .from('solicitacoes')
-      .select('id', { count: 'exact', head: true })
-      .in('posto_id', postoIds)
-      .eq('status', 'aguardando')
-
-    const { count: parceiros } = await svc
-      .from('parcerias')
-      .select('id', { count: 'exact', head: true })
-      .in('posto_id', postoIds)
-      .eq('status', 'ativa')
-
-    // ── Solicitações pendentes ────────────────────────────────────
-    const { data: solicitacoesRaw } = await svc
-      .from('solicitacoes')
-      .select(`
-        id, combustiveis, volume_estimado, valor_estimado, mensagem, posto_id,
-        empresas ( nome_empresa, cnpj, cidade, estado )
-      `)
-      .in('posto_id', postoIds)
-      .eq('status', 'aguardando')
-      .order('created_at', { ascending: false })
-      .limit(10)
 
     const postoNomeMap = Object.fromEntries(postos.map((p) => [p.id, p.nome]))
 

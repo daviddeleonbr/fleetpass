@@ -11,10 +11,35 @@ export async function GET(req: NextRequest) {
     const { data: empresa } = await svc.from('empresas').select('id').eq('perfil_id', user.id).single()
     if (!empresa) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 })
 
-    // Parcerias ativas
-    const { data: ativasRaw } = await svc.from('parcerias')
-      .select('id, combustiveis, ciclo_tipo, iniciada_em, postos(id, nome, bandeira, cidade, estado)')
-      .eq('empresa_id', empresa.id).eq('status', 'ativa').order('iniciada_em', { ascending: false })
+    // As 4 leituras são independentes → em paralelo (antes: 4 round-trips seriais)
+    const [
+      { data: ativasRaw },
+      { data: pendAssinRaw },
+      { data: encerradasRaw },
+      { data: solsRaw },
+    ] = await Promise.all([
+      svc.from('parcerias')
+        .select('id, combustiveis, ciclo_tipo, iniciada_em, postos(id, nome, bandeira, cidade, estado)')
+        .eq('empresa_id', empresa.id).eq('status', 'ativa').order('iniciada_em', { ascending: false }),
+      svc.from('parcerias').select(`
+        id, combustiveis, iniciada_em,
+        postos(id, nome, bandeira, cidade, estado),
+        contratos(assinado_empresa_em, assinado_posto_em)
+      `).eq('empresa_id', empresa.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .eq('status', 'pendente_assinatura' as any).order('iniciada_em', { ascending: false }),
+      svc.from('parcerias')
+        .select('id, combustiveis, encerrada_em, postos(nome, bandeira, cidade, estado)')
+        .eq('empresa_id', empresa.id).eq('status', 'encerrada').order('encerrada_em', { ascending: false }),
+      svc.from('solicitacoes').select(`
+        id, combustiveis, status, created_at,
+        postos(id, nome, bandeira, cidade, estado),
+        propostas(id, combustiveis, ciclo_tipo, ciclo_intervalo_dias, ciclo_prazo_recebimento,
+          limite_credito, volume_minimo, validade_dias, validade_ate, observacoes, status, created_at)
+      `).eq('empresa_id', empresa.id)
+        .in('status', ['aguardando', 'proposta_recebida', 'em_negociacao'])
+        .order('created_at', { ascending: false }),
+    ])
 
     const ativas = (ativasRaw ?? []).map((p) => {
       const posto = p.postos as { id: string; nome: string; bandeira: string; cidade: string; estado: string } | null
@@ -28,18 +53,6 @@ export async function GET(req: NextRequest) {
         combustiveis: (p.combustiveis as { tipo: string; ativo?: boolean }[]).filter((c) => c.ativo !== false).map((c) => c.tipo),
       }
     })
-
-    // Parcerias aguardando assinatura
-    const { data: pendAssinRaw } = await svc.from('parcerias')
-      .select(`
-        id, combustiveis, iniciada_em,
-        postos(id, nome, bandeira, cidade, estado),
-        contratos(assinado_empresa_em, assinado_posto_em)
-      `)
-      .eq('empresa_id', empresa.id)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .eq('status', 'pendente_assinatura' as any)
-      .order('iniciada_em', { ascending: false })
 
     const aguardandoAssinatura = (pendAssinRaw ?? []).map((p) => {
       const posto = p.postos as { id: string; nome: string; bandeira: string; cidade: string; estado: string } | null
@@ -57,11 +70,6 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Parcerias encerradas
-    const { data: encerradasRaw } = await svc.from('parcerias')
-      .select('id, combustiveis, encerrada_em, postos(nome, bandeira, cidade, estado)')
-      .eq('empresa_id', empresa.id).eq('status', 'encerrada').order('encerrada_em', { ascending: false })
-
     const encerradas = (encerradasRaw ?? []).map((p) => {
       const posto = p.postos as { nome: string; bandeira: string; cidade: string; estado: string } | null
       return {
@@ -73,18 +81,6 @@ export async function GET(req: NextRequest) {
         motivo: 'Encerrado',
       }
     })
-
-    // Solicitações pendentes (aguardando ou com proposta recebida)
-    const { data: solsRaw } = await svc.from('solicitacoes')
-      .select(`
-        id, combustiveis, status, created_at,
-        postos(id, nome, bandeira, cidade, estado),
-        propostas(id, combustiveis, ciclo_tipo, ciclo_intervalo_dias, ciclo_prazo_recebimento,
-          limite_credito, volume_minimo, validade_dias, validade_ate, observacoes, status, created_at)
-      `)
-      .eq('empresa_id', empresa.id)
-      .in('status', ['aguardando', 'proposta_recebida', 'em_negociacao'])
-      .order('created_at', { ascending: false })
 
     const solsPendentes = solsRaw ?? []
 
