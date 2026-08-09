@@ -27,7 +27,7 @@ export async function GET() {
       count('empresas'),
       count('requisicoes', (q: any) => q.gte('created_at', inicioMes)),
       count('faturamentos'),
-      svc.from('abastecimentos').select('combustivel, litros, valor').gte('data', inicioMes),
+      svc.rpc('admin_abast_mes_agg', { p_inicio: inicioMes }),
       svc.from('abastecimentos')
         .select('id, codigo, data, valor, status, postos(nome), empresas(nome_empresa)')
         .order('data', { ascending: false }).limit(10),

@@ -27,28 +27,21 @@ export async function GET() {
     const postoIds = (postos ?? []).map((p: any) => p.id)
     if (postoIds.length === 0) return NextResponse.json({ clientes: [] })
 
-    // Parcerias dos postos → empresas parceiras
-    const { data: parcerias } = await svc
-      .from('parcerias')
-      .select('empresa_id, status, iniciada_em, empresas ( nome_empresa, cnpj, cidade, estado )')
-      .in('posto_id', postoIds)
-      .order('iniciada_em', { ascending: false })
-
-    // Abastecimentos dos postos (para agregados por empresa)
-    const { data: abast } = await svc
-      .from('abastecimentos')
-      .select('empresa_id, codigo, valor, data')
-      .in('posto_id', postoIds)
+    // Parcerias + agregados por empresa (somas no banco via RPC) em paralelo
+    const [{ data: parcerias }, { data: aggRows }] = await Promise.all([
+      svc.from('parcerias')
+        .select('empresa_id, status, iniciada_em, empresas ( nome_empresa, cnpj, cidade, estado )')
+        .in('posto_id', postoIds).order('iniciada_em', { ascending: false }),
+      svc.rpc('posto_clientes_agg', { p_posto_ids: postoIds }),
+    ])
 
     const agg: Record<string, { count: number; valor: number; ultimoCodigo: string; ultimaData: string }> = {}
-    for (const a of abast ?? []) {
-      const id = a.empresa_id
-      if (!agg[id]) agg[id] = { count: 0, valor: 0, ultimoCodigo: '', ultimaData: '' }
-      agg[id].count++
-      agg[id].valor += Number(a.valor)
-      if (!agg[id].ultimaData || new Date(a.data) > new Date(agg[id].ultimaData)) {
-        agg[id].ultimaData = a.data
-        agg[id].ultimoCodigo = a.codigo
+    for (const r of (aggRows ?? []) as any[]) {
+      agg[r.empresa_id] = {
+        count: Number(r.total_abast) || 0,
+        valor: Number(r.total_valor) || 0,
+        ultimoCodigo: r.ultimo_codigo ?? '',
+        ultimaData: r.ultima_data ?? '',
       }
     }
 
