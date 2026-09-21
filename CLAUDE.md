@@ -42,8 +42,9 @@ npm run lint     # eslint (eslint-config-next)
 ```
 
 Scripts utilitários (Node, leem `.env.local`): `scripts/reset-senha.mjs` (redefine senha
-via service role), `scripts/verificar-conexao.mjs`. Migrations em `supabase/migrations/`
-(aplicar com a Supabase CLI).
+via service role), `scripts/verificar-conexao.mjs`, `scripts/seed-mock.mjs` (popula/limpa
+dados de demonstração — usuários `@fuellink-mock.com.br`, senha `Mock@1234`; `--limpar`
+só remove). Migrations em `supabase/migrations/` (aplicar com a Supabase CLI).
 
 ## Arquitetura
 
