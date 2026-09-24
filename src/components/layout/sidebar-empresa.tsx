@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Home, FileText, BarChart2, Settings, Truck, Users, Handshake, Fuel, Zap, Receipt } from 'lucide-react'
+import { Home, FileText, BarChart2, Settings, Truck, Users, Handshake, Fuel, Zap, Receipt, Store } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useParceriasPendencias } from '@/hooks/use-parcerias-pendencias'
@@ -16,6 +16,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Visão geral', href: '/empresa', icon: Home },
+  { label: 'Vitrine', href: '/empresa/vitrine', icon: Store },
   { label: 'Parcerias', href: '/empresa/parcerias', icon: Handshake },
   {
     label: 'Frota',

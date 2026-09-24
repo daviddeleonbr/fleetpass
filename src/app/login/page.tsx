@@ -73,7 +73,7 @@ export default function LoginPage() {
         />
 
         {/* conteúdo */}
-        <div className="relative z-10 flex flex-col justify-between w-full p-12 xl:p-14">
+        <div className="relative z-10 flex flex-col justify-between w-full max-w-xl mx-auto p-12 xl:p-14">
           {/* logo */}
           <motion.div
             initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}

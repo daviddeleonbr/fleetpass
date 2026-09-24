@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Download, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -56,9 +57,12 @@ function fmtLitros(v: number) {
   return `${v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} L`
 }
 
-export default function HistoricoEmpresaPage() {
+function HistoricoEmpresa() {
+  // Filtro inicial vindo da Vitrine: /empresa/historico?postoId=<id>
+  const searchParams = useSearchParams()
+
   const [mesIdx,       setMesIdx]       = useState(0)   // índice em MESES
-  const [postoId,      setPostoId]      = useState('')
+  const [postoId,      setPostoId]      = useState(searchParams.get('postoId') ?? '')
   const [veiculoId,    setVeiculoId]    = useState('')
   const [motoristaId,  setMotoristaId]  = useState('')
 
@@ -279,5 +283,21 @@ export default function HistoricoEmpresaPage() {
         )}
       </Card>
     </div>
+  )
+}
+
+// useSearchParams() exige fronteira de Suspense para a página poder ser
+// pré-renderizada estaticamente (App Router).
+export default function HistoricoEmpresaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20 text-gray-400">
+          <Loader2 size={20} className="animate-spin" />
+        </div>
+      }
+    >
+      <HistoricoEmpresa />
+    </Suspense>
   )
 }

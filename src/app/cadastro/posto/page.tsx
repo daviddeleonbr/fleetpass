@@ -156,7 +156,7 @@ export default function CadastroPostoPage() {
           transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         />
 
-        <div className="relative z-10 flex flex-col justify-center gap-8 w-full p-8 xl:p-10 overflow-y-auto">
+        <div className="relative z-10 flex flex-col justify-center gap-8 w-full max-w-xl mx-auto p-8 xl:p-10 overflow-y-auto">
           {/* logo */}
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
             <Link href="/" className="flex items-center gap-2.5">

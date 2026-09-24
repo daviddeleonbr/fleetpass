@@ -10,6 +10,7 @@ function useBreadcrumb() {
 
   const labels: Record<string, string> = {
     empresa: 'Empresa',
+    vitrine: 'Vitrine',
     parcerias: 'Parcerias',
     frota: 'Frota',
     veiculos: 'Veículos',
