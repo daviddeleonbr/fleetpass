@@ -1174,6 +1174,7 @@ export type Database = {
           status: Database["public"]["Enums"]["status_ativo_inativo"]
           telefone: string | null
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           asaas_api_key?: string | null
@@ -1199,6 +1200,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_ativo_inativo"]
           telefone?: string | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           asaas_api_key?: string | null
@@ -1224,6 +1226,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_ativo_inativo"]
           telefone?: string | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {

@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapPin, Fuel, Droplets, Loader2, Info, Quote } from 'lucide-react'
+import { MapPin, Fuel, Droplets, Loader2, Info, Quote, MessageCircle, Handshake, Check, AlertCircle } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
+import { Button } from '@/components/ui/button'
+import { exibirWhatsapp } from '@/lib/utils'
 import { Estrelas } from './estrelas'
 import { BandeiraLogo, PostoFoto } from './midia'
 import type { PostoDescobertoDetalhe } from './types'
@@ -29,6 +31,30 @@ export function PostoDescobertoModal({
   const [posto, setPosto]     = useState<PostoDescobertoDetalhe | null>(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro]       = useState<string | null>(null)
+
+  const [enviando, setEnviando]   = useState(false)
+  const [enviada, setEnviada]     = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+
+  async function solicitarParceria() {
+    if (!posto) return
+    setEnviando(true)
+    setErroEnvio(null)
+    try {
+      const res = await fetch('/api/empresa/parcerias/solicitar', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ postoId: posto.postoId }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? 'Não foi possível enviar a solicitação.')
+      setEnviada(true)
+    } catch (e) {
+      setErroEnvio(e instanceof Error ? e.message : 'Não foi possível enviar a solicitação.')
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   useEffect(() => {
     let cancelado = false
@@ -133,11 +159,56 @@ export function PostoDescobertoModal({
             )}
           </section>
 
-          <p className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3">
-            <Info size={14} className="text-gray-400 shrink-0 mt-px" />
-            Você ainda não tem parceria com este posto. O convite para uma nova
-            parceria parte sempre do posto — não é possível solicitá-la por aqui.
-          </p>
+          <section className="pt-5 border-t border-gray-100 space-y-3">
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Conectar-se com este posto</h4>
+
+            {(enviada || posto.solicitacaoAberta) ? (
+              <p className="flex items-start gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+                <Check size={15} className="shrink-0 mt-0.5" />
+                {enviada
+                  ? 'Solicitação enviada. O posto vai analisar e responder com uma proposta.'
+                  : 'Você já tem uma solicitação em andamento com este posto.'}
+              </p>
+            ) : (
+              <>
+                <Button
+                  className="w-full"
+                  onClick={solicitarParceria}
+                  isLoading={enviando}
+                >
+                  <Handshake size={16} /> Solicitar parceria
+                </Button>
+                {erroEnvio && (
+                  <p className="flex items-start gap-2 text-xs text-red-600">
+                    <AlertCircle size={13} className="shrink-0 mt-0.5" /> {erroEnvio}
+                  </p>
+                )}
+              </>
+            )}
+
+            {posto.whatsapp ? (
+              <a
+                href={`https://wa.me/${posto.whatsapp}?text=${encodeURIComponent(`Olá! Somos uma transportadora no FleetPass e gostaríamos de falar sobre uma parceria com o ${posto.nome}.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Button variant="secondary" size="md" className="w-full">
+                  <MessageCircle size={16} /> Falar no WhatsApp · {exibirWhatsapp(posto.whatsapp)}
+                </Button>
+              </a>
+            ) : (
+              <p className="text-xs text-gray-400">
+                Este posto ainda não informou um WhatsApp de contato.
+              </p>
+            )}
+
+            <p className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3">
+              <Info size={14} className="text-gray-400 shrink-0 mt-px" />
+              Solicitar não cria parceria. O posto recebe o pedido, responde com uma
+              proposta e a parceria só passa a valer depois que você aceitar.
+            </p>
+          </section>
         </div>
       )}
     </Modal>

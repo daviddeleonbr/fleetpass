@@ -34,18 +34,31 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     const { id } = await ctx.params
 
-    const { data: posto } = await svc
+    const { data: posto, error: errPosto } = await svc
       .from('postos')
-      .select('id, nome, bandeira, endereco, numero, complemento, bairro, cidade, estado, cep, lat, lng, combustiveis, capacidade')
+      .select('id, nome, bandeira, endereco, numero, complemento, bairro, cidade, estado, cep, lat, lng, combustiveis, capacidade, whatsapp')
       .eq('id', id)
       .eq('status', 'ativo')
       .maybeSingle()
 
+    // Separar falha de query de "não existe" importa: sem isso, um erro de
+    // schema (coluna faltando, por exemplo) chegava ao usuário como um 404
+    // "Posto não encontrado", escondendo a causa real.
+    if (errPosto) throw errPosto
     if (!posto) return NextResponse.json({ error: 'Posto não encontrado.' }, { status: 404 })
 
-    const [notas, comentarios] = await Promise.all([
+    // Empresa do usuário: para saber se já existe negociação aberta com este
+    // posto e, assim, não oferecer "Solicitar parceria" duas vezes.
+    const { data: empresa } = await svc.from('empresas').select('id').eq('perfil_id', user.id).single()
+
+    const [notas, comentarios, solAberta] = await Promise.all([
       buscarNotas(svc, [posto.id]),
       buscarComentarios(svc, posto.id),
+      empresa
+        ? svc.from('solicitacoes').select('id').eq('empresa_id', empresa.id).eq('posto_id', posto.id)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .in('status', ['aguardando', 'proposta_recebida', 'em_negociacao'] as any[]).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
 
     const linha  = [posto.endereco, posto.numero].filter(Boolean).join(', ')
@@ -67,6 +80,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         nota:            notas.get(posto.id)?.media ?? null,
         totalAvaliacoes: notas.get(posto.id)?.total ?? 0,
         comentarios,
+        // Contato direto: só existe para posto cadastrado com WhatsApp.
+        whatsapp:        posto.whatsapp || null,
+        solicitacaoAberta: !!solAberta?.data,
       },
     })
   } catch (err) {

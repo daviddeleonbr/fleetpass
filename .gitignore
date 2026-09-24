@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# documento de apoio local (contexto do projeto para IA), não faz parte do código
+prompt-fuellink.md

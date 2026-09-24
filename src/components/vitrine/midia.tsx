@@ -39,9 +39,19 @@ const COR_BANDEIRA: Record<string, string> = {
   independente: 'bg-gray-100 text-gray-600',
 }
 
+/**
+ * Bandeiras que realmente têm arquivo em `public/bandeiras/<slug>.png`.
+ *
+ * Enquanto a lista estiver vazia, nenhum card tenta carregar logo — antes,
+ * cada card disparava uma requisição ao otimizador que voltava 400, poluindo o
+ * console e gastando rede só para cair no fallback. Ao adicionar um arquivo,
+ * inclua o slug aqui.
+ */
+const LOGOS_DISPONIVEIS: string[] = []
+
 export function BandeiraLogo({ bandeira, size = 40 }: { bandeira: string; size?: number }) {
-  const [falhou, setFalhou] = useState(false)
   const slug = slugBandeira(bandeira)
+  const [falhou, setFalhou] = useState(!LOGOS_DISPONIVEIS.includes(slug))
 
   if (falhou) {
     return (

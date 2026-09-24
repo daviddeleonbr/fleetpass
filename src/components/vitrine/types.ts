@@ -64,6 +64,10 @@ export interface ComentarioPublico {
 export interface PostoDescobertoDetalhe extends Omit<PostoDescoberto, 'jaFoiParceiro'> {
   cep: string | null
   comentarios: ComentarioPublico[]
+  /** Só dígitos com DDI (5527999250088). Null em posto cadastrado antes da exigência. */
+  whatsapp: string | null
+  /** Já existe negociação em andamento — não oferecer nova solicitação. */
+  solicitacaoAberta: boolean
 }
 
 type BadgeVariant = 'ativo' | 'pendente' | 'inativo'
