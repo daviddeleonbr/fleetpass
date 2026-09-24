@@ -18,9 +18,12 @@ import type { PostoDescobertoDetalhe } from './types'
  */
 export function PostoDescobertoModal({
   postoId,
+  foto,
   onClose,
 }: {
   postoId: string
+  /** Mesma foto do card, resolvida pela página — o posto não "troca de fachada". */
+  foto: { arquivo: string; posicao: string }
   onClose: () => void
 }) {
   const [posto, setPosto]     = useState<PostoDescobertoDetalhe | null>(null)
@@ -55,7 +58,12 @@ export function PostoDescobertoModal({
 
       {!loading && !erro && posto && (
         <div className="space-y-6">
-          <PostoFoto bandeira={posto.bandeira} nome={posto.nome} className="h-40 w-full rounded-xl" />
+          <PostoFoto
+            src={foto.arquivo}
+            posicao={foto.posicao}
+            nome={posto.nome}
+            className="w-full aspect-[12/5] rounded-xl"
+          />
 
           <div className="flex items-center gap-3">
             <BandeiraLogo bandeira={posto.bandeira} size={44} />

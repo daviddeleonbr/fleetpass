@@ -8,17 +8,15 @@ import { cn } from '@/lib/utils'
 /**
  * Resolução de imagens da Vitrine.
  *
- * Nada aqui depende de coluna nova no banco: os arquivos são estáticos e
- * resolvidos pelo enum `posto_bandeira`. Enquanto não existirem, cada
- * componente cai num fallback desenhado — a tela nunca quebra.
+ * Nada aqui depende de coluna nova no banco — os arquivos são estáticos, e cada
+ * componente cai num fallback desenhado quando faltarem: a tela nunca quebra.
  *
- * Para ativar, basta soltar os arquivos em `public/`:
+ *   public/postos/posto-NN.jpg    → fotos ILUSTRATIVAS de capa dos cards,
+ *                                   sorteadas pelo id do posto (ver PostoFoto)
  *   public/bandeiras/<slug>.png   → logo da bandeira (quadrado, fundo transparente)
- *   public/postos/<slug>.jpg      → foto de capa do card
- *   public/postos/default.jpg     → capa usada quando não houver a da bandeira
  *
  * (O banner da Vitrine não passa por aqui: é a arte pronta em
- *  `public/vitrine/banner.jpg`, usada inteira em `empresa/vitrine/page.tsx`.)
+ *  `public/vitrine/banner-v2.jpg`, usada inteira em `empresa/vitrine/page.tsx`.)
  *
  * slug = bandeira em minúsculas e sem acento: shell, ipiranga, petrobras,
  * vibra, raizen, independente.
@@ -77,30 +75,80 @@ export function BandeiraLogo({ bandeira, size = 40 }: { bandeira: string; size?:
   )
 }
 
-/** Capa do card. Tenta a foto da bandeira, depois a padrão, depois o gradiente. */
-export function PostoFoto({ bandeira, nome, className }: { bandeira: string; nome: string; className?: string }) {
-  const [etapa, setEtapa] = useState<0 | 1 | 2>(0)
-  const slug = slugBandeira(bandeira)
-  const src  = etapa === 0 ? `/postos/${slug}.jpg` : '/postos/default.jpg'
+/**
+ * Fotos genéricas disponíveis em `public/postos/`.
+ *
+ * Cada entrada é uma CENA DIFERENTE — nada de espelhamento, que só produzia a
+ * mesma foto invertida. Para acrescentar: solte `posto-05.jpg` na pasta e
+ * adicione a linha correspondente aqui.
+ *
+ * ATENÇÃO ao TROCAR uma foto: use um nome NOVO em vez de sobrescrever o arquivo.
+ * O otimizador do Next e o navegador cacheiam pela URL, então reaproveitar o
+ * nome continua servindo a imagem antiga — já aconteceu duas vezes aqui.
+ *
+ * Os quatro arquivos são 962x395 (2.435:1), praticamente a mesma proporção do
+ * container do card (12/5 = 2.40). O object-cover corta ~1,5% da largura, então
+ * `object-center` preserva a composição inteira nas quatro — cobertura, bombas,
+ * loja e entorno. `posicao` fica disponível caso um asset futuro precise de
+ * enquadramento diferente.
+ */
+const FOTOS_GENERICAS: { arquivo: string; posicao: string }[] = [
+  { arquivo: '/postos/posto-01.jpg', posicao: 'object-center' }, // entardecer, toldo âmbar
+  { arquivo: '/postos/posto-02.jpg', posicao: 'object-center' }, // noturno, toldo turquesa
+  { arquivo: '/postos/posto-03.jpg', posicao: 'object-center' }, // dia, céu claro
+  { arquivo: '/postos/posto-04.jpg', posicao: 'object-center' }, // amanhecer na rodovia
+]
+
+export const TOTAL_FOTOS = FOTOS_GENERICAS.length
+
+/**
+ * Foto genérica por POSIÇÃO, não por hash.
+ *
+ * O hash colidia: com poucos assets, dois postos vizinhos caíam na mesma
+ * imagem. Distribuindo por índice, cada posto de uma lista recebe uma cena
+ * distinta enquanto houver fotos disponíveis.
+ */
+export function fotoGenerica(indice: number): { arquivo: string; posicao: string } {
+  const i = ((indice % TOTAL_FOTOS) + TOTAL_FOTOS) % TOTAL_FOTOS
+  return FOTOS_GENERICAS[i]
+}
+
+/**
+ * Capa do card e do modal.
+ *
+ * `postos` não tem coluna de imagem, então quem chama resolve a foto e passa
+ * pronta — assim card e modal mostram sempre a mesma. Se um dia existir foto
+ * cadastrada, basta passá-la em `src`, sem tocar neste componente.
+ */
+export function PostoFoto({
+  src, posicao = 'object-center', nome, className,
+}: {
+  src: string
+  posicao?: string
+  nome: string
+  className?: string
+}) {
+  const [falhou, setFalhou] = useState(false)
 
   return (
-    <div className={cn('relative overflow-hidden bg-gradient-to-br from-petrol-700 to-petrol-950', className)}>
-      {etapa < 2 && (
+    <div className={cn('relative overflow-hidden bg-gradient-to-br from-petrol-800 to-petrol-950', className)}>
+      {!falhou ? (
         <Image
           src={src}
-          alt={`Fachada do ${nome}`}
+          alt={`Imagem ilustrativa de posto de combustível — ${nome}`}
           fill
-          sizes="(max-width: 640px) 100vw, 400px"
-          className="object-cover"
-          onError={() => setEtapa((e) => (e === 0 ? 1 : 2))}
+          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 640px"
+          className={cn('object-cover', posicao)}
+          onError={() => setFalhou(true)}
         />
-      )}
-      {etapa === 2 && (
+      ) : (
         <div className="absolute inset-0 flex items-center justify-center">
           <Fuel size={30} className="text-white/25" />
         </div>
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
+      {/* Gradiente curto no rodapé: dá contraste ao badge e costura a foto ao
+          corpo do card, em vez de deixar uma faixa com corte seco. */}
+      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent" />
     </div>
   )
 }

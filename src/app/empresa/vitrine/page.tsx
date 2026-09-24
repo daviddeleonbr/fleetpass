@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { LINKS } from '@/components/landing/links'
 import { PostoDescobertoCard } from '@/components/vitrine/posto-descoberto-card'
 import { PostoDescobertoModal } from '@/components/vitrine/posto-descoberto-modal'
+import { fotoGenerica } from '@/components/vitrine/midia'
 import type { PostoDescoberto } from '@/components/vitrine/types'
 
 // Leaflet precisa de window — nunca renderiza no servidor.
@@ -93,6 +94,14 @@ export default function VitrinePage() {
       })
   }, [postos, busca, bandeiras, combustiveis, ordenacao])
 
+  // Foto ilustrativa por posto. A posição vem da ordem dos ids, não de hash nem
+  // da ordenação da tela: é estável entre filtros e distribui cenas diferentes
+  // entre os postos — dois cards vizinhos nunca repetem a mesma imagem.
+  const fotos = useMemo(() => {
+    const ids = postos.map((p) => p.postoId).sort()
+    return new Map(ids.map((id, i) => [id, fotoGenerica(i)]))
+  }, [postos])
+
   const filtrosAtivos = bandeiras.length + combustiveis.length
   const comCoordenada = filtrados.filter((p) => p.lat != null && p.lng != null).length
 
@@ -100,7 +109,9 @@ export default function VitrinePage() {
     set(lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor])
 
   return (
-    <div className="space-y-6">
+    // max-w impede que os cards cresçam indefinidamente: sem teto, num 2K o card
+    // chegava a 948px de largura e a foto virava uma faixa panorâmica.
+    <div className="space-y-6 max-w-[1600px] mx-auto">
       {/* ── Banner ─────────────────────────────────────────────────────────
           A arte é usada inteira, sem recorte e sem overlay: largura total e
           altura automática pela proporção nativa (2108x372 — o arquivo original
@@ -247,9 +258,16 @@ export default function VitrinePage() {
             </div>
           ) : (
             <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
-              <div className="grid gap-5 sm:grid-cols-2">
+              {/* Volta a 1 coluna no lg: é onde o painel lateral (20rem) entra e
+                  espremia os cards para ~180px, deixando a foto quase quadrada. */}
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 {filtrados.map((p) => (
-                  <PostoDescobertoCard key={p.postoId} posto={p} onAbrir={setSelecionado} />
+                  <PostoDescobertoCard
+                    key={p.postoId}
+                    posto={p}
+                    foto={fotos.get(p.postoId) ?? fotoGenerica(0)}
+                    onAbrir={setSelecionado}
+                  />
                 ))}
               </div>
 
@@ -328,6 +346,7 @@ export default function VitrinePage() {
         <PostoDescobertoModal
           key={selecionado}
           postoId={selecionado}
+          foto={fotos.get(selecionado) ?? fotoGenerica(0)}
           onClose={() => setSelecionado(null)}
         />
       )}
