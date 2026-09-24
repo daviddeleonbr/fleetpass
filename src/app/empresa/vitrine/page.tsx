@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import {
   Search, Loader2, AlertCircle, SearchX, Compass, SlidersHorizontal, List, Map as MapIcon,
-  ArrowUpDown, ShieldCheck, Mail, Check, X,
+  ArrowUpDown, ShieldCheck, MessageCircle, Check, X,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -294,9 +294,15 @@ export default function VitrinePage() {
                   <p className="text-xs text-gray-500 mt-0.5">
                     Fale com o time do FleetPass sobre novas parcerias.
                   </p>
-                  <a href={LINKS.contato} className="block mt-3">
-                    <Button variant="secondary" size="sm" className="w-full">
-                      <Mail size={14} /> Entrar em contato
+
+                  <a
+                    href={`${LINKS.whatsapp}?text=${encodeURIComponent('Olá! Gostaria de saber mais sobre novas parcerias no FleetPass.')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mt-3"
+                  >
+                    <Button size="sm" className="w-full">
+                      <MessageCircle size={14} /> Falar no WhatsApp
                     </Button>
                   </a>
                 </div>
