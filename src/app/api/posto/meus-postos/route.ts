@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase-server'
 import { syncQuantidadeCnpj } from '@/lib/stripe-cnpj'
+import { normalizarWhatsapp } from '@/lib/utils'
 
 // ── Geocoding ───────────────────────────────────────────────────────────────
 
@@ -109,7 +110,7 @@ export async function GET() {
 
     const { data: postos, error: dbError } = await supabase
       .from('postos')
-      .select('id, nome, cnpj, bandeira, endereco, numero, bairro, cidade, estado, cep, combustiveis, capacidade, status, lat, lng')
+      .select('id, nome, cnpj, bandeira, endereco, numero, bairro, cidade, estado, cep, combustiveis, capacidade, whatsapp, status, lat, lng')
       .eq('conta_posto_id', contaPostoId!)
       .order('created_at', { ascending: true })
 
@@ -145,6 +146,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios: nome, cnpj, endereco, cidade, estado.' }, { status: 400 })
     }
 
+    // WhatsApp é o canal pelo qual a transportadora fala com o posto na Vitrine,
+    // por isso é obrigatório para concluir o cadastro. Validado aqui, e não só
+    // no formulário, porque a rota é a fronteira de verdade.
+    const whatsapp = normalizarWhatsapp(String(body.whatsapp ?? ''))
+    if (!whatsapp) {
+      return NextResponse.json(
+        { error: 'Informe um WhatsApp válido com DDD (celular de 9 dígitos).' },
+        { status: 400 },
+      )
+    }
+
     // Usa coordenadas do mapa se fornecidas; caso contrário, tenta geocoding
     let lat: number | null = null
     let lng: number | null = null
@@ -172,6 +184,7 @@ export async function POST(req: NextRequest) {
         cep:             (cep || '').replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2'),
         combustiveis:    combustiveis || [],
         capacidade:      capacidade   || null,
+        whatsapp,
         lat,
         lng,
         status:          'ativo',
@@ -209,6 +222,15 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'id obrigatório.' }, { status: 400 })
 
+    // Mesma exigência do POST: editar um posto não pode deixá-lo sem WhatsApp.
+    const whatsapp = normalizarWhatsapp(String(fields.whatsapp ?? ''))
+    if (!whatsapp) {
+      return NextResponse.json(
+        { error: 'Informe um WhatsApp válido com DDD (celular de 9 dígitos).' },
+        { status: 400 },
+      )
+    }
+
     // Usa coordenadas do mapa se fornecidas; caso contrário, tenta geocoding
     let patchLat: number | null | undefined = undefined
     let patchLng: number | null | undefined = undefined
@@ -237,6 +259,7 @@ export async function PATCH(req: NextRequest) {
       cep:          fields.cep,
       combustiveis: fields.combustiveis,
       capacidade:   fields.capacidade ?? null,
+      whatsapp,
     }
     if (patchLat !== undefined) { updatePayload.lat = patchLat; updatePayload.lng = patchLng }
 

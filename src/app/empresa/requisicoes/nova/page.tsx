@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Check, ArrowLeft, ClipboardCheck, Fuel, Car, User, MapPin, Gauge, Calendar, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -27,7 +28,11 @@ type Parceria = {
   combustiveis: string[]
 }
 
-export default function NovaRequisicaoPage() {
+function NovaRequisicaoForm() {
+  // Pré-seleção vinda da Vitrine: /empresa/requisicoes/nova?parceriaId=<id>
+  const searchParams  = useSearchParams()
+  const parceriaParam = searchParams.get('parceriaId')
+
   const [veiculos, setVeiculos]     = useState<Veiculo[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
   const [parcerias, setParcerias]   = useState<Parceria[]>([])
@@ -53,12 +58,19 @@ export default function NovaRequisicaoPage() {
     fetch('/api/empresa/requisicoes/form-data')
       .then(r => r.json())
       .then(d => {
+        const parceriasAtivas: Parceria[] = d.parcerias ?? []
         setVeiculos(d.veiculos ?? [])
         setMotoristas(d.motoristas ?? [])
-        setParcerias(d.parcerias ?? [])
+        setParcerias(parceriasAtivas)
+
+        // Só aceita o parceriaId da URL se ele estiver entre as parcerias ativas
+        // que a API devolveu para ESTA empresa — o parâmetro nunca é confiado sozinho.
+        if (parceriaParam && parceriasAtivas.some(p => p.id === parceriaParam)) {
+          setForm(f => ({ ...f, parceriaId: parceriaParam }))
+        }
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [parceriaParam])
 
   const update = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }))
 
@@ -478,5 +490,21 @@ export default function NovaRequisicaoPage() {
         </div>
       )}
     </div>
+  )
+}
+
+// useSearchParams() exige fronteira de Suspense para a página poder ser
+// pré-renderizada estaticamente (App Router).
+export default function NovaRequisicaoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20 text-gray-400">
+          <Loader2 size={20} className="animate-spin" />
+        </div>
+      }
+    >
+      <NovaRequisicaoForm />
+    </Suspense>
   )
 }

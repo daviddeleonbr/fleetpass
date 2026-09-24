@@ -30,11 +30,15 @@ export async function GET(req: NextRequest) {
         .eq('bloqueado', false)
         .order('nome'),
 
+      // postos!inner + status = 'ativo' espelha a validação do POST desta mesma
+      // rota. Sem isso o formulário oferecia parcerias cujo posto está inativo e
+      // o usuário só descobria a recusa ao enviar.
       svc
         .from('parcerias')
-        .select('id, combustiveis, postos(id, nome, cidade, estado)')
+        .select('id, combustiveis, postos!inner(id, nome, cidade, estado, status)')
         .eq('empresa_id', empresa.id)
         .eq('status', 'ativa')
+        .eq('postos.status', 'ativo')
         .order('created_at', { ascending: false }),
     ])
 

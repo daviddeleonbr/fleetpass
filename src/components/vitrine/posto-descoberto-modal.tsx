@@ -1,0 +1,216 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { MapPin, Fuel, Droplets, Loader2, Info, Quote, MessageCircle, Handshake, Check, AlertCircle } from 'lucide-react'
+import { Modal } from '@/components/ui/modal'
+import { Button } from '@/components/ui/button'
+import { exibirWhatsapp } from '@/lib/utils'
+import { Estrelas } from './estrelas'
+import { BandeiraLogo, PostoFoto } from './midia'
+import type { PostoDescobertoDetalhe } from './types'
+
+/**
+ * Detalhe de um posto sem parceria. Somente leitura e sem dado de contato:
+ * não há CNPJ, telefone nem condição comercial, e nenhuma ação de parceria.
+ */
+/**
+ * O pai monta este componente com key={postoId}, então cada posto abre uma
+ * instância nova — não há estado antigo para limpar e o efeito nunca precisa
+ * chamar setState de forma síncrona.
+ */
+export function PostoDescobertoModal({
+  postoId,
+  foto,
+  onClose,
+}: {
+  postoId: string
+  /** Mesma foto do card, resolvida pela página — o posto não "troca de fachada". */
+  foto: { arquivo: string; posicao: string }
+  onClose: () => void
+}) {
+  const [posto, setPosto]     = useState<PostoDescobertoDetalhe | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [erro, setErro]       = useState<string | null>(null)
+
+  const [enviando, setEnviando]   = useState(false)
+  const [enviada, setEnviada]     = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+
+  async function solicitarParceria() {
+    if (!posto) return
+    setEnviando(true)
+    setErroEnvio(null)
+    try {
+      const res = await fetch('/api/empresa/parcerias/solicitar', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ postoId: posto.postoId }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? 'Não foi possível enviar a solicitação.')
+      setEnviada(true)
+    } catch (e) {
+      setErroEnvio(e instanceof Error ? e.message : 'Não foi possível enviar a solicitação.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  useEffect(() => {
+    let cancelado = false
+
+    fetch(`/api/empresa/vitrine/descobrir/${postoId}`)
+      .then(async (r) => {
+        const d = await r.json()
+        if (!r.ok) throw new Error(d.error ?? 'Não foi possível carregar o posto.')
+        return d
+      })
+      .then((d) => { if (!cancelado) setPosto(d.posto) })
+      .catch((e) => { if (!cancelado) setErro(e instanceof Error ? e.message : 'Erro ao carregar.') })
+      .finally(() => { if (!cancelado) setLoading(false) })
+
+    return () => { cancelado = true }
+  }, [postoId])
+
+  return (
+    <Modal isOpen onClose={onClose} title={posto?.nome ?? 'Posto'} size="lg">
+      {loading && (
+        <div className="flex items-center justify-center py-16 text-gray-400">
+          <Loader2 size={20} className="animate-spin" />
+        </div>
+      )}
+
+      {!loading && erro && <p className="text-sm text-red-600 py-4">{erro}</p>}
+
+      {!loading && !erro && posto && (
+        <div className="space-y-6">
+          <PostoFoto
+            src={foto.arquivo}
+            posicao={foto.posicao}
+            nome={posto.nome}
+            className="w-full aspect-[12/5] rounded-xl"
+          />
+
+          <div className="flex items-center gap-3">
+            <BandeiraLogo bandeira={posto.bandeira} size={44} />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900">{posto.bandeira}</p>
+              <Estrelas nota={posto.nota} total={posto.totalAvaliacoes} className="mt-0.5" />
+            </div>
+          </div>
+
+          <section>
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Localização</h4>
+            <div className="flex items-start gap-2.5">
+              <MapPin size={15} className="text-gray-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-800">
+                {[posto.endereco, `${posto.cidade} · ${posto.estado}`, posto.cep].filter(Boolean).join(' — ')}
+              </p>
+            </div>
+            {posto.capacidade && (
+              <div className="flex items-start gap-2.5 mt-3">
+                <Droplets size={15} className="text-gray-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-800">{posto.capacidade}</p>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Combustíveis</h4>
+            {posto.combustiveis.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {posto.combustiveis.map((c) => (
+                  <span
+                    key={c}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100 text-xs text-gray-700"
+                  >
+                    <Fuel size={11} className="text-gray-400" />
+                    {c}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Não informado.</p>
+            )}
+          </section>
+
+          <section>
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              O que dizem as transportadoras
+            </h4>
+            {posto.comentarios.length > 0 ? (
+              <ul className="space-y-3">
+                {posto.comentarios.map((c, i) => (
+                  <li key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <Estrelas nota={c.nota} size={13} ocultarTotal />
+                      <span className="text-[11px] text-gray-400">{c.data}</span>
+                    </div>
+                    <p className="flex gap-2 mt-2 text-sm text-gray-700">
+                      <Quote size={13} className="text-gray-300 shrink-0 mt-1" />
+                      {c.comentario}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-2 ml-[21px]">{c.autor}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500">Este posto ainda não recebeu avaliações.</p>
+            )}
+          </section>
+
+          <section className="pt-5 border-t border-gray-100 space-y-3">
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Conectar-se com este posto</h4>
+
+            {(enviada || posto.solicitacaoAberta) ? (
+              <p className="flex items-start gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+                <Check size={15} className="shrink-0 mt-0.5" />
+                {enviada
+                  ? 'Solicitação enviada. O posto vai analisar e responder com uma proposta.'
+                  : 'Você já tem uma solicitação em andamento com este posto.'}
+              </p>
+            ) : (
+              <>
+                <Button
+                  className="w-full"
+                  onClick={solicitarParceria}
+                  isLoading={enviando}
+                >
+                  <Handshake size={16} /> Solicitar parceria
+                </Button>
+                {erroEnvio && (
+                  <p className="flex items-start gap-2 text-xs text-red-600">
+                    <AlertCircle size={13} className="shrink-0 mt-0.5" /> {erroEnvio}
+                  </p>
+                )}
+              </>
+            )}
+
+            {posto.whatsapp ? (
+              <a
+                href={`https://wa.me/${posto.whatsapp}?text=${encodeURIComponent(`Olá! Somos uma transportadora no FleetPass e gostaríamos de falar sobre uma parceria com o ${posto.nome}.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Button variant="secondary" size="md" className="w-full">
+                  <MessageCircle size={16} /> Falar no WhatsApp · {exibirWhatsapp(posto.whatsapp)}
+                </Button>
+              </a>
+            ) : (
+              <p className="text-xs text-gray-400">
+                Este posto ainda não informou um WhatsApp de contato.
+              </p>
+            )}
+
+            <p className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-4 py-3">
+              <Info size={14} className="text-gray-400 shrink-0 mt-px" />
+              Solicitar não cria parceria. O posto recebe o pedido, responde com uma
+              proposta e a parceria só passa a valer depois que você aceitar.
+            </p>
+          </section>
+        </div>
+      )}
+    </Modal>
+  )
+}

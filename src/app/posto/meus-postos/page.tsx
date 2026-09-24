@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import { cn, maskTelefone, normalizarWhatsapp, exibirWhatsapp } from '@/lib/utils'
 
 const MapPicker = dynamic(
   () => import('@/components/ui/map-picker').then((m) => m.MapPicker),
@@ -41,6 +41,7 @@ interface Posto {
   bandeira: string
   combustiveis: string[]
   capacidade: string | null
+  whatsapp: string | null
   status: StatusPosto
   lat?: number | null
   lng?: number | null
@@ -92,7 +93,7 @@ function PainelPosto({ posto, onBack }: { posto: Posto; onBack: () => void }) {
 function emptyForm() {
   return {
     nome: '', cnpj: '', endereco: '', numero: '', complemento: '', bairro: '',
-    cidade: '', estado: '', cep: '', bandeira: '', capacidade: '',
+    cidade: '', estado: '', cep: '', bandeira: '', capacidade: '', whatsapp: '',
     combustiveis: [] as string[],
     lat: null as number | null,
     lng: null as number | null,
@@ -164,7 +165,7 @@ export default function MeusPostosPage() {
 
   const openEditModal = (p: Posto) => {
     setEditingId(p.id)
-    setForm({ ...emptyForm(), nome: p.nome, cnpj: p.cnpj, endereco: p.endereco, numero: p.numero, bairro: p.bairro, cidade: p.cidade, estado: p.estado, cep: p.cep, bandeira: p.bandeira, capacidade: p.capacidade ?? '', combustiveis: [...p.combustiveis], lat: p.lat ?? null, lng: p.lng ?? null })
+    setForm({ ...emptyForm(), nome: p.nome, cnpj: p.cnpj, endereco: p.endereco, numero: p.numero, bairro: p.bairro, cidade: p.cidade, estado: p.estado, cep: p.cep, bandeira: p.bandeira, capacidade: p.capacidade ?? '', whatsapp: p.whatsapp ? exibirWhatsapp(p.whatsapp) : '', combustiveis: [...p.combustiveis], lat: p.lat ?? null, lng: p.lng ?? null })
     setModalStep(1)
     setFormErro('')
     setShowModal(true)
@@ -177,7 +178,7 @@ export default function MeusPostosPage() {
     setSavingPosto(true)
     setFormErro('')
     try {
-      const res  = await fetch('/api/posto/meus-postos', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editingId, nome: form.nome, cnpj: form.cnpj, bandeira: form.bandeira, endereco: form.endereco, numero: form.numero, complemento: form.complemento || null, bairro: form.bairro, cidade: form.cidade, estado: form.estado, cep: form.cep, combustiveis: form.combustiveis, capacidade: form.capacidade || null, lat: form.lat, lng: form.lng }) })
+      const res  = await fetch('/api/posto/meus-postos', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editingId, nome: form.nome, cnpj: form.cnpj, bandeira: form.bandeira, endereco: form.endereco, numero: form.numero, complemento: form.complemento || null, bairro: form.bairro, cidade: form.cidade, estado: form.estado, cep: form.cep, combustiveis: form.combustiveis, capacidade: form.capacidade || null, whatsapp: form.whatsapp, lat: form.lat, lng: form.lng }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setPostos(prev => prev.map(p => p.id === editingId ? { ...p, ...data.posto } : p))
@@ -194,7 +195,7 @@ export default function MeusPostosPage() {
     setSavingPosto(true)
     setFormErro('')
     try {
-      const res  = await fetch('/api/posto/meus-postos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: form.nome, cnpj: form.cnpj, bandeira: form.bandeira, endereco: form.endereco, numero: form.numero, complemento: form.complemento || null, bairro: form.bairro, cidade: form.cidade, estado: form.estado, cep: form.cep, combustiveis: form.combustiveis, capacidade: form.capacidade || null, lat: form.lat, lng: form.lng }) })
+      const res  = await fetch('/api/posto/meus-postos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: form.nome, cnpj: form.cnpj, bandeira: form.bandeira, endereco: form.endereco, numero: form.numero, complemento: form.complemento || null, bairro: form.bairro, cidade: form.cidade, estado: form.estado, cep: form.cep, combustiveis: form.combustiveis, capacidade: form.capacidade || null, whatsapp: form.whatsapp, lat: form.lat, lng: form.lng }) })
       const data = await res.json()
       if (!res.ok) { setFormErro(data.error ?? 'Erro ao criar posto.'); return }
       setPostos(prev => [...prev, data.posto])
@@ -418,6 +419,16 @@ export default function MeusPostosPage() {
                       </div>
                       {form.combustiveis.length === 0 && <p className="text-xs text-gray-400 mt-2">Selecione ao menos um combustível.</p>}
                     </div>
+                    {/* Obrigatório: é por este número que a transportadora fala
+                        com o posto na Vitrine. Validado também na API. */}
+                    <Input
+                      label="WhatsApp do posto *"
+                      placeholder="(27) 99925-0088"
+                      value={form.whatsapp}
+                      onChange={e => update('whatsapp', maskTelefone(e.target.value))}
+                      error={form.whatsapp && !normalizarWhatsapp(form.whatsapp) ? 'Informe um celular com DDD (9 dígitos).' : undefined}
+                      helperText="As transportadoras usam este número para falar com o posto na Vitrine."
+                    />
                     <Input label="Capacidade estimada (L/mês)" type="number" placeholder="50000" value={form.capacidade} onChange={e => update('capacidade', e.target.value)} helperText="Volume estimado de combustível vendido por mês" />
                     {formErro && <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{formErro}</div>}
                     <div className="flex gap-3 pt-1">
@@ -425,7 +436,7 @@ export default function MeusPostosPage() {
                       <Button
                         className="flex-1"
                         onClick={editingId ? salvarEditar : salvarPosto}
-                        disabled={form.combustiveis.length === 0 || savingPosto}
+                        disabled={form.combustiveis.length === 0 || !normalizarWhatsapp(form.whatsapp) || savingPosto}
                         isLoading={savingPosto}
                       >
                         {editingId ? <><CheckCircle size={14} /> Salvar alterações</> : 'Finalizar cadastro'}

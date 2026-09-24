@@ -136,12 +136,20 @@ export async function POST(req: NextRequest) {
     // Valida parceria e obtém posto_id
     const { data: parceria } = await svc
       .from('parcerias')
-      .select('id, posto_id')
+      .select('id, posto_id, postos(status)')
       .eq('id', body.parceriaId)
       .eq('empresa_id', empresa.id)
       .eq('status', 'ativa')
       .single()
     if (!parceria) return NextResponse.json({ error: 'Parceria não encontrada.' }, { status: 422 })
+
+    // O posto também precisa estar ativo: antes disso, uma parceria ativa com posto
+    // desativado ainda aceitava a requisição. A Vitrine já marca esse caso como
+    // indisponível — aqui é a fronteira real, que não depende do frontend.
+    const postoDaParceria = parceria.postos as unknown as { status: string } | null
+    if (postoDaParceria?.status !== 'ativo') {
+      return NextResponse.json({ error: 'Posto indisponível no momento.' }, { status: 422 })
+    }
 
     // Validade: fim do dia selecionado (23:59:59 no horário local → ISO string)
     const validadeEOD = new Date(`${body.validade}T23:59:59`)

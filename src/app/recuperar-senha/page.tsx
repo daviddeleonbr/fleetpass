@@ -50,7 +50,7 @@ export default function RecuperarSenhaPage() {
         <motion.div aria-hidden className="absolute -bottom-24 -right-20 w-[30rem] h-[30rem] rounded-full bg-fuel-500/15 blur-3xl"
           animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.65, 0.4] }} transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1 }} />
 
-        <div className="relative z-10 flex flex-col justify-center gap-8 w-full p-8 xl:p-10 overflow-y-auto">
+        <div className="relative z-10 flex flex-col justify-center gap-8 w-full max-w-xl mx-auto p-8 xl:p-10 overflow-y-auto">
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
             <Link href="/" className="flex items-center gap-2.5">
               <span className="w-10 h-10 bg-petrol-500 rounded-xl flex items-center justify-center shadow-lg shadow-petrol-900/50">
